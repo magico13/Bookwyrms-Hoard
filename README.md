@@ -34,6 +34,32 @@ python main.py interactive
 
 This will start an interactive session where you can scan book barcodes one after another. Perfect for use with a dedicated barcode scanner.
 
+### Bookshelf Management
+
+```bash
+# Create a bookshelf
+python main.py shelf create "Library" "Large bookshelf" --rows 5 --columns 4
+
+# List all bookshelves
+python main.py shelf list
+
+# Interactive shelf stocking
+python main.py shelf stock "Library" "Large bookshelf"
+
+# Find where a book is located
+python main.py locate 9780134685991
+```
+
+### Bookshelf Organization
+
+Bookshelves are organized in a grid system:
+
+- **Columns**: Numbered 0 to N from left to right
+- **Rows**: Numbered 0 to N from top to bottom
+- **Location Format**: `Location/Bookshelf/C{column}R{row}`
+
+Example: A book at `Library/Large bookshelf/C2R1` is in the Library, on the Large bookshelf, 3rd column from left, 2nd row from top.
+
 ## Supported ISBN Formats
 
 - ISBN-10: `0134685997`
