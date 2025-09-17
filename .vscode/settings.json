@@ -1,0 +1,10 @@
+{
+    "python.linting.enabled": true,
+    "python.linting.mypyEnabled": true,
+    "python.linting.mypyArgs": [
+        "--strict",
+        "--ignore-missing-imports"
+    ],
+    "python.linting.lintOnSave": true,
+    "python.analysis.typeCheckingMode": "strict"
+}

@@ -1,0 +1,7 @@
+isbnlib>=3.10.14
+requests>=2.31.0
+click>=8.1.7
+
+# Development dependencies
+mypy>=1.8.0
+types-requests>=2.31.0

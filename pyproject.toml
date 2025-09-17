@@ -1,0 +1,58 @@
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bookwyrms-hoard"
+version = "0.1.0"
+description = "A CLI tool for managing book collections and tracking shelf locations"
+readme = "README.md"
+authors = [
+    {name = "Bookwyrms", email = "books@example.com"}
+]
+license = {file = "LICENSE"}
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: End Users/Desktop",
+    "Topic :: Office/Business :: Office Suites",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
+keywords = ["books", "isbn", "library", "collection", "barcode", "cli"]
+dependencies = [
+    "isbnlib>=3.10.14",
+    "requests>=2.31.0",
+    "click>=8.1.7",
+]
+requires-python = ">=3.8"
+
+[project.urls]
+Homepage = "https://github.com/magico13/Bookwyrms-Hoard"
+Repository = "https://github.com/magico13/Bookwyrms-Hoard"
+Issues = "https://github.com/magico13/Bookwyrms-Hoard/issues"
+
+[project.scripts]
+bookwyrms = "bookwyrms.cli:cli"
+
+[tool.mypy]
+# Global options
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+
+# Per-module options
+[[tool.mypy.overrides]]
+module = [
+    "isbnlib.*",
+]
+ignore_missing_imports = true
