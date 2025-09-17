@@ -71,7 +71,14 @@ python -m mypy bookwyrms/ main.py
 Or use the development check script:
 
 ```bash
+# Run type checking and functionality tests
 python dev_check.py
+
+# Also check for package updates
+python dev_check.py --check-updates
+
+# Only check for package updates
+python dev_check.py --updates-only
 ```
 
 ### Code Quality
