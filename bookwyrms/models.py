@@ -19,12 +19,6 @@ class BookInfo:
     page_count: Optional[int] = None
     cover_url: Optional[str] = None
     language: Optional[str] = None
-    
-    # Future fields for library management:
-    # current_location: Optional[str] = None
-    # assigned_shelf: Optional[str] = None
-    # checked_out_to: Optional[str] = None
-    # checked_out_date: Optional[str] = None
 
     def __str__(self) -> str:
         """Human-readable representation of the book."""

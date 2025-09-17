@@ -3,11 +3,12 @@ Command line interface for Bookwyrm's Hoard.
 """
 
 import logging
-from typing import NoReturn
+from datetime import datetime
+from typing import Optional
 import click
 from .lookup import BookLookupService
 from .models import BookInfo
-from .shelf_models import Bookshelf, BookRecord, ShelfLocation
+from .shelf_models import Bookshelf, BookRecord
 from .storage import BookshelfStorage
 
 
@@ -279,6 +280,148 @@ def locate(isbn: str) -> None:
             book_record.home_location.column != book_record.current_location.column or
             book_record.home_location.row != book_record.current_location.row):
             click.echo(f"🏠 Home location: {book_record.home_location}")
+
+
+@cli.command('checkout')
+@click.argument('isbn')
+@click.argument('person')
+@click.option('--date', help='Check-out date (YYYY-MM-DD), defaults to today')
+def checkout_book(isbn: str, person: str, date: str) -> None:
+    """Check out a book to someone.
+    
+    ISBN: ISBN of the book to check out
+    PERSON: Name of person checking out the book
+    """
+    storage = BookshelfStorage()
+    book_record = storage.get_book(isbn)
+    
+    if not book_record:
+        click.echo(f"❌ Book not found: {isbn}")
+        return
+    
+    if book_record.is_checked_out:
+        click.echo(f"❌ Book is already checked out to {book_record.checked_out_to}")
+        return
+    
+    # Use provided date or default to today
+    checkout_date = date if date else datetime.now().strftime('%Y-%m-%d')
+    
+    # Update book record
+    book_record.checked_out_to = person
+    book_record.checked_out_date = checkout_date
+    book_record.current_location = None  # Book is no longer on shelf
+    
+    storage.add_or_update_book(book_record)
+    
+    click.echo(f"✅ Checked out: {book_record.book_info.title}")
+    click.echo(f"👤 To: {person}")
+    click.echo(f"📅 Date: {checkout_date}")
+
+
+@cli.command('checkin')
+@click.argument('isbn')
+@click.option('--location', help='Location to check book into')
+@click.option('--bookshelf', help='Bookshelf name to check book into')
+@click.option('--column', type=int, help='Column number (0-based)')
+@click.option('--row', type=int, help='Row number (0-based)')
+def checkin_book(isbn: str, location: Optional[str], bookshelf: Optional[str], column: Optional[int], row: Optional[int]) -> None:
+    """Check in a book, optionally to a new location.
+    
+    ISBN: ISBN of the book to check in
+    
+    If no location is specified, book returns to its home location.
+    If location is specified, all parameters (location, bookshelf, column, row) are required.
+    """
+    storage = BookshelfStorage()
+    book_record = storage.get_book(isbn)
+    
+    if not book_record:
+        click.echo(f"❌ Book not found: {isbn}")
+        return
+    
+    if not book_record.is_checked_out:
+        click.echo("❌ Book is not currently checked out")
+        return
+    
+    # Determine where to check the book in
+    if location and bookshelf and column is not None and row is not None:
+        # Check in to a specific new location
+        target_bookshelf = storage.get_bookshelf(location, bookshelf)
+        if not target_bookshelf:
+            click.echo(f"❌ Bookshelf '{bookshelf}' not found in '{location}'")
+            return
+        
+        try:
+            new_location = target_bookshelf.get_shelf_location(column, row)
+            book_record.current_location = new_location
+            click.echo(f"📍 Checked in to: {new_location}")
+        except ValueError as e:
+            click.echo(f"❌ Invalid location: {e}")
+            return
+    
+    elif not any([location, bookshelf, column is not None, row is not None]):
+        # Return to home location
+        if not book_record.home_location:
+            click.echo("❌ Book has no home location set. Specify location parameters.")
+            return
+        
+        book_record.current_location = book_record.home_location
+        click.echo(f"🏠 Returned to home location: {book_record.home_location}")
+    
+    else:
+        click.echo("❌ To check in to a new location, provide all: --location --bookshelf --column --row")
+        return
+    
+    # Clear check-out information
+    book_record.checked_out_to = None
+    book_record.checked_out_date = None
+    
+    storage.add_or_update_book(book_record)
+    click.echo(f"✅ Checked in: {book_record.book_info.title}")
+
+
+@cli.command('status')
+@click.argument('isbn', required=False)
+def book_status(isbn: str) -> None:
+    """Show detailed status of a book or all checked-out books.
+    
+    ISBN: ISBN of specific book to check (optional)
+    """
+    storage = BookshelfStorage()
+    
+    if isbn:
+        # Show status of specific book
+        book_record = storage.get_book(isbn)
+        if not book_record:
+            click.echo(f"❌ Book not found: {isbn}")
+            return
+        
+        click.echo(f"📖 {book_record.book_info.title}")
+        click.echo(f"👥 Authors: {', '.join(book_record.book_info.authors) if book_record.book_info.authors else 'Unknown'}")
+        
+        if book_record.is_checked_out:
+            click.echo(f"📤 Status: Checked out to {book_record.checked_out_to}")
+            click.echo(f"📅 Since: {book_record.checked_out_date}")
+        else:
+            click.echo(f"📍 Status: Available at {book_record.current_location_str}")
+        
+        if book_record.home_location:
+            click.echo(f"🏠 Home: {book_record.home_location}")
+    
+    else:
+        # Show all checked-out books
+        all_books = storage.get_books()
+        checked_out_books = [book for book in all_books.values() if book.is_checked_out]
+        
+        if not checked_out_books:
+            click.echo("📚 No books are currently checked out")
+            return
+        
+        click.echo(f"📤 Currently checked out books ({len(checked_out_books)}):")
+        for book in checked_out_books:
+            click.echo(f"  • {book.book_info.title}")
+            click.echo(f"    👤 To: {book.checked_out_to}")
+            click.echo(f"    📅 Since: {book.checked_out_date}")
 
 
 if __name__ == '__main__':

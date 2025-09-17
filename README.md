@@ -1,4 +1,4 @@
-# Bookwyrms Hoard
+# Bookwyrm's Hoard
 
 A CLI tool for managing book collections and tracking shelf locations.
 
@@ -8,6 +8,10 @@ A CLI tool for managing book collections and tracking shelf locations.
 - **Barcode Scanner Support**: Works with any barcode scanner that acts like a keyboard
 - **Multiple Data Sources**: Uses Google Books API, Open Library, and other sources
 - **Interactive Mode**: Perfect for scanning multiple books in succession
+- **Shelf Management**: Create and organize bookshelves with grid-based locations
+- **Book Location Tracking**: Track where each book is located on your shelves
+- **Check-out System**: Check books out to people and track due dates
+- **JSON Storage**: Portable data storage that works with version control
 
 ## Installation
 
@@ -68,13 +72,39 @@ Example: A book at `Library/Large bookshelf/C2R1` is in the Library, on the Larg
 
 The tool automatically handles format conversion and validation.
 
+### Check-out System
+
+```bash
+# Check out a book to someone
+python main.py checkout 9780134685991 "John Doe"
+
+# Check out with custom date
+python main.py checkout 9780134685991 "Jane Smith" --date 2025-01-01
+
+# Check in to home location
+python main.py checkin 9780134685991
+
+# Check in to specific location
+python main.py checkin 9780134685991 --location Library --bookshelf "Large bookshelf" --column 0 --row 1
+
+# Check book status
+python main.py status 9780134685991
+
+# List all checked-out books
+python main.py status
+```
+
+## Data Storage
+
+Books and shelf information are stored in JSON files in the `data/` directory:
+
+- `data/books.json`: Book records with locations and checkout status
+- `data/bookshelves.json`: Bookshelf definitions and configurations
+
 ## Future Features
 
-- [ ] Shelf location tracking
-- [ ] Check-in/check-out system
-- [ ] Database storage for book collection
 - [ ] Search books by title/author
-- [ ] Export collection data
+- [ ] Import/export collection data
 - [ ] Web interface
 
 ## Development
