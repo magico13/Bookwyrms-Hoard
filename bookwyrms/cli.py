@@ -3,6 +3,7 @@ Command line interface for Bookwyrm's Hoard.
 """
 
 import logging
+import uuid
 from datetime import datetime
 from typing import Optional
 import click
@@ -41,6 +42,48 @@ def _display_book_info(book_info: BookInfo) -> None:
         click.echo(f"\nCover Image: {book_info.cover_url}")
     
     click.echo("="*60)
+
+
+def _display_brief_book_info(book_info: BookInfo) -> None:
+    """Display brief book information for shelf stocking."""
+    authors_str = ", ".join(book_info.authors) if book_info.authors else "Unknown Author"
+    year_str = f" ({book_info.published_date})" if book_info.published_date else ""
+    click.echo(f"📖 {book_info.title} by {authors_str}{year_str}")
+
+
+def _generate_fake_isbn() -> str:
+    """Generate a fake ISBN for books without one."""
+    # Use a UUID-based approach to ensure uniqueness
+    fake_id = str(uuid.uuid4()).replace('-', '')[:10]
+    # Prefix with 'FAKE' to make it clear this isn't a real ISBN
+    return f"FAKE{fake_id}"
+
+
+def _collect_manual_book_info() -> Optional[BookInfo]:
+    """Collect book information manually from user input."""
+    click.echo("\n📝 Manual book entry:")
+    
+    title = click.prompt("Title", type=str).strip()
+    if not title:
+        click.echo("❌ Title is required")
+        return None
+    
+    authors_input = click.prompt("Author(s) (separate multiple with commas)", type=str).strip()
+    authors = [author.strip() for author in authors_input.split(',')] if authors_input else ["Unknown Author"]
+    
+    year = click.prompt("Year (optional)", type=str, default="").strip()
+    
+    isbn_input = click.prompt("ISBN (optional, will generate fake one if empty)", type=str, default="").strip()
+    isbn = isbn_input if isbn_input else _generate_fake_isbn()
+    
+    book_info = BookInfo(
+        isbn=isbn,
+        title=title,
+        authors=authors,
+        published_date=year if year else None
+    )
+    
+    return book_info
 
 
 @click.group()
@@ -186,7 +229,11 @@ def stock_shelf(location: str, name: str) -> None:
     click.echo(f"Grid: {bookshelf.columns} columns × {bookshelf.rows} rows")
     click.echo("Columns are numbered 0 to {} (left to right)".format(bookshelf.columns - 1))
     click.echo("Rows are numbered 0 to {} (top to bottom)".format(bookshelf.rows - 1))
-    click.echo("\nType 'quit' or 'exit' to stop, 'next' to move to next slot\n")
+    click.echo("\nCommands:")
+    click.echo("  • Scan/type ISBN to add book")
+    click.echo("  • 'manual' to manually enter book details")
+    click.echo("  • 'next' to move to next slot")  
+    click.echo("  • 'quit' or 'exit' to stop\n")
     
     service = BookLookupService()
     current_column = 0
@@ -204,9 +251,9 @@ def stock_shelf(location: str, name: str) -> None:
             if existing_books:
                 click.echo("📖 Books already in this slot:")
                 for book in existing_books:
-                    click.echo(f"  • {book.book_info.title}")
+                    _display_brief_book_info(book.book_info)
             
-            isbn = click.prompt("ISBN (or 'next'/'quit')", type=str).strip()
+            isbn = click.prompt("ISBN (or 'next'/'quit'/'manual')", type=str).strip()
             
             if isbn.lower() in ['quit', 'exit', 'q']:
                 click.echo("👋 Goodbye!")
@@ -224,14 +271,26 @@ def stock_shelf(location: str, name: str) -> None:
                 click.echo("-" * 40)
                 continue
             
-            if not isbn:
+            if isbn.lower() in ['manual', 'm']:
+                # Manual book entry
+                book_info = _collect_manual_book_info()
+                if not book_info:
+                    continue
+            elif not isbn:
                 continue
-            
-            # Look up book
-            book_info = service.get_book_info(isbn)
-            if not book_info:
-                click.echo(f"❌ Book not found: {isbn}")
-                continue
+            else:
+                # Look up book by ISBN
+                book_info = service.get_book_info(isbn)
+                if not book_info:
+                    click.echo(f"❌ Book not found: {isbn}")
+                    # Offer option to enter manually
+                    manual_entry = click.confirm("Would you like to enter book details manually?")
+                    if manual_entry:
+                        book_info = _collect_manual_book_info()
+                        if not book_info:
+                            continue
+                    else:
+                        continue
             
             # Create shelf location
             shelf_location = bookshelf.get_shelf_location(current_column, current_row)
@@ -246,7 +305,8 @@ def stock_shelf(location: str, name: str) -> None:
             # Save book
             storage.add_or_update_book(book_record)
             
-            click.echo(f"✅ Added: {book_info.title}")
+            click.echo("✅ Added:")
+            _display_brief_book_info(book_info)
             click.echo(f"📍 Location: {shelf_location}")
             click.echo("-" * 40)
             
