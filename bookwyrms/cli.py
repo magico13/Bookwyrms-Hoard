@@ -114,47 +114,6 @@ def lookup(isbn: str) -> None:
     else:
         click.echo(f"❌ No book information found for ISBN: {isbn}")
 
-
-@cli.command()
-def interactive() -> None:
-    """Interactive mode for scanning multiple books.
-    
-    Perfect for use with a barcode scanner - just scan books one after another.
-    Type 'quit' or 'exit' to stop.
-    """
-    click.echo("📚 Interactive Book Scanner Mode")
-    click.echo("Scan a book barcode or type an ISBN, then press Enter.")
-    click.echo("Type 'quit' or 'exit' to stop.\n")
-    
-    service = BookLookupService()
-    
-    while True:
-        try:
-            isbn = click.prompt("ISBN", type=str).strip()
-            
-            if isbn.lower() in ['quit', 'exit', 'q']:
-                click.echo("👋 Goodbye!")
-                break
-            
-            if not isbn:
-                continue
-                
-            book_info = service.get_book_info(isbn)
-            
-            if book_info:
-                click.echo(f"✅ Found: {book_info}")
-            else:
-                click.echo(f"❌ Not found: {isbn}")
-            
-            click.echo("-" * 40)
-            
-        except KeyboardInterrupt:
-            click.echo("\n👋 Goodbye!")
-            break
-        except Exception as e:
-            click.echo(f"❌ Error: {e}")
-
-
 @cli.group()
 def shelf() -> None:
     """Manage bookshelves and book locations."""
@@ -239,19 +198,23 @@ def stock_shelf(location: str, name: str) -> None:
     current_column = 0
     current_row = 0
     
+    shown_books = False
+
     while True:
         try:
             # Show current position
             click.echo(f"📍 Current slot: Column {current_column}, Row {current_row}")
             
-            # Show existing books in this slot
-            existing_books = storage.get_books_on_shelf(
-                location, name, current_column, current_row
-            )
-            if existing_books:
-                click.echo("📖 Books already in this slot:")
-                for book in existing_books:
-                    _display_brief_book_info(book.book_info)
+            if not shown_books:
+                # Show existing books in this slot
+                shown_books = True
+                existing_books = storage.get_books_on_shelf(
+                    location, name, current_column, current_row
+                )
+                if existing_books:
+                    click.echo("📖 Books already in this slot:")
+                    for book in existing_books:
+                        _display_brief_book_info(book.book_info)
             
             isbn = click.prompt("ISBN (or 'next'/'quit'/'manual')", type=str).strip()
             
@@ -269,6 +232,7 @@ def stock_shelf(location: str, name: str) -> None:
                         click.echo("📚 Reached end of bookshelf!")
                         current_column = 0
                 click.echo("-" * 40)
+                shown_books = False
                 continue
             
             if isbn.lower() in ['manual', 'm']:
