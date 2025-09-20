@@ -262,8 +262,7 @@ def stock_shelf(location: str, name: str) -> None:
             # Create book record
             book_record = BookRecord(
                 book_info=book_info,
-                home_location=shelf_location,
-                current_location=shelf_location
+                home_location=shelf_location
             )
             
             # Save book
@@ -298,12 +297,9 @@ def locate(isbn: str) -> None:
     click.echo(f"📖 {book_record.book_info.title}")
     click.echo(f"📍 {book_record.current_location_str}")
     
-    if book_record.home_location and book_record.current_location:
-        if (book_record.home_location.location != book_record.current_location.location or
-            book_record.home_location.bookshelf_name != book_record.current_location.bookshelf_name or
-            book_record.home_location.column != book_record.current_location.column or
-            book_record.home_location.row != book_record.current_location.row):
-            click.echo(f"🏠 Home location: {book_record.home_location}")
+    # For checked out books, show where they normally belong
+    if book_record.is_checked_out and book_record.home_location:
+        click.echo(f"🏠 Usually kept at: {book_record.home_location}")
 
 
 @cli.command('checkout')
@@ -333,7 +329,6 @@ def checkout_book(isbn: str, person: str, date: str) -> None:
     # Update book record
     book_record.checked_out_to = person
     book_record.checked_out_date = checkout_date
-    book_record.current_location = None  # Book is no longer on shelf
     
     storage.add_or_update_book(book_record)
     
@@ -369,7 +364,7 @@ def checkin_book(isbn: str, location: Optional[str], bookshelf: Optional[str], c
     
     # Determine where to check the book in
     if location and bookshelf and column is not None and row is not None:
-        # Check in to a specific new location
+        # Check in to a specific new location (becomes new home location)
         target_bookshelf = storage.get_bookshelf(location, bookshelf)
         if not target_bookshelf:
             click.echo(f"❌ Bookshelf '{bookshelf}' not found in '{location}'")
@@ -377,19 +372,18 @@ def checkin_book(isbn: str, location: Optional[str], bookshelf: Optional[str], c
         
         try:
             new_location = target_bookshelf.get_shelf_location(column, row)
-            book_record.current_location = new_location
-            click.echo(f"📍 Checked in to: {new_location}")
+            book_record.home_location = new_location
+            click.echo(f"📍 Checked in to new location: {new_location}")
         except ValueError as e:
             click.echo(f"❌ Invalid location: {e}")
             return
     
     elif not any([location, bookshelf, column is not None, row is not None]):
-        # Return to home location
+        # Check in to existing home location
         if not book_record.home_location:
             click.echo("❌ Book has no home location set. Specify location parameters.")
             return
         
-        book_record.current_location = book_record.home_location
         click.echo(f"🏠 Returned to home location: {book_record.home_location}")
     
     else:
@@ -428,9 +422,8 @@ def book_status(isbn: str) -> None:
             click.echo(f"📅 Since: {book_record.checked_out_date}")
         else:
             click.echo(f"📍 Status: Available at {book_record.current_location_str}")
-        
-        if book_record.home_location:
-            click.echo(f"🏠 Home: {book_record.home_location}")
+            if book_record.home_location:
+                click.echo(f"🏠 Home: {book_record.home_location}")
     
     else:
         # Show all checked-out books

@@ -101,7 +101,6 @@ class BookRecord:
     """Represents a book with location information."""
     book_info: BookInfo
     home_location: Optional[ShelfLocation] = None
-    current_location: Optional[ShelfLocation] = None
     checked_out_to: Optional[str] = None
     checked_out_date: Optional[str] = None
     notes: Optional[str] = None
@@ -116,10 +115,8 @@ class BookRecord:
         """Get current location as string."""
         if self.is_checked_out:
             return f"Checked out to {self.checked_out_to}"
-        elif self.current_location:
-            return str(self.current_location)
         elif self.home_location:
-            return f"Should be at {self.home_location}"
+            return str(self.home_location)
         else:
             return "Location unknown"
     
@@ -128,7 +125,6 @@ class BookRecord:
         return {
             "book_info": self.book_info.to_dict(),
             "home_location": self.home_location.to_dict() if self.home_location else None,
-            "current_location": self.current_location.to_dict() if self.current_location else None,
             "checked_out_to": self.checked_out_to,
             "checked_out_date": self.checked_out_date,
             "notes": self.notes
@@ -140,7 +136,6 @@ class BookRecord:
         return cls(
             book_info=BookInfo(**data["book_info"]),
             home_location=ShelfLocation.from_dict(data["home_location"]) if data.get("home_location") else None,
-            current_location=ShelfLocation.from_dict(data["current_location"]) if data.get("current_location") else None,
             checked_out_to=data.get("checked_out_to"),
             checked_out_date=data.get("checked_out_date"),
             notes=data.get("notes")

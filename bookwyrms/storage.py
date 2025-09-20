@@ -196,7 +196,11 @@ class BookshelfStorage:
         result = []
         
         for book in books.values():
-            book_location = book.current_location or book.home_location
+            # Skip checked out books - they're not on any shelf
+            if book.is_checked_out:
+                continue
+                
+            book_location = book.home_location
             if not book_location:
                 continue
             
