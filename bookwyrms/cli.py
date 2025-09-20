@@ -5,7 +5,7 @@ Command line interface for Bookwyrm's Hoard.
 import logging
 import uuid
 from datetime import datetime
-from typing import Optional
+from typing import List, Optional
 import click
 from .lookup import BookLookupService
 from .models import BookInfo
@@ -439,6 +439,59 @@ def book_status(isbn: str) -> None:
             click.echo(f"  • {book.book_info.title}")
             click.echo(f"    👤 To: {book.checked_out_to}")
             click.echo(f"    📅 Since: {book.checked_out_date}")
+
+
+@cli.command()
+@click.option('--title', '-t', help='Search term for book title')
+@click.option('--author', '-a', help='Search term for author name')
+def search(title: Optional[str], author: Optional[str]) -> None:
+    """Search for books by title and/or author.
+    
+    Performs case-insensitive substring matching. You can search by title only,
+    author only, or both. At least one search term must be provided.
+    """
+    if not title and not author:
+        click.echo("❌ Please provide at least one search term (--title or --author)")
+        return
+    
+    storage = BookshelfStorage()
+    results = storage.search_books(title=title, author=author)
+    
+    if not results:
+        error_terms: List[str] = []
+        if title:
+            error_terms.append(f"title containing '{title}'")
+        if author:
+            error_terms.append(f"author containing '{author}'")
+        click.echo(f"❌ No books found matching {' and '.join(error_terms)}")
+        return
+    
+    # Display results
+    display_terms: List[str] = []
+    if title:
+        display_terms.append(f"title: '{title}'")
+    if author:
+        display_terms.append(f"author: '{author}'")
+    
+    click.echo(f"📚 Found {len(results)} book(s) matching {' and '.join(display_terms)}:")
+    click.echo()
+    
+    for book in results:
+        click.echo(f"📖 {book.book_info.title}")
+        authors_str = ", ".join(book.book_info.authors) if book.book_info.authors else "Unknown Author"
+        click.echo(f"   👥 By: {authors_str}")
+        
+        if book.book_info.published_date:
+            click.echo(f"   📅 Published: {book.book_info.published_date}")
+        
+        # Show location/status
+        if book.is_checked_out:
+            click.echo(f"   📤 Status: Checked out to {book.checked_out_to}")
+        else:
+            click.echo(f"   📍 Location: {book.current_location_str}")
+        
+        click.echo(f"   🔢 ISBN: {book.book_info.isbn}")
+        click.echo()
 
 
 if __name__ == '__main__':

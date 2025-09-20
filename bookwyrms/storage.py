@@ -215,3 +215,47 @@ class BookshelfStorage:
                 result.append(book)
         
         return result
+    
+    def search_books(self, title: Optional[str] = None, author: Optional[str] = None) -> List[BookRecord]:
+        """Search books by title and/or author using case-insensitive contains matching.
+        
+        Args:
+            title: Search term for book title (optional)
+            author: Search term for author name (optional)
+            
+        Returns:
+            List of BookRecord objects matching the search criteria
+        """
+        if not title and not author:
+            return []
+        
+        books = self.get_books()
+        result = []
+        
+        # Convert search terms to lowercase for case-insensitive matching
+        title_lower = title.lower() if title else None
+        author_lower = author.lower() if author else None
+        
+        for book in books.values():
+            matches = True
+            
+            # Check title match if title search term provided
+            if title_lower:
+                book_title = book.book_info.title.lower()
+                if title_lower not in book_title:
+                    matches = False
+            
+            # Check author match if author search term provided
+            if author_lower and matches:
+                author_match = False
+                for book_author in book.book_info.authors:
+                    if author_lower in book_author.lower():
+                        author_match = True
+                        break
+                if not author_match:
+                    matches = False
+            
+            if matches:
+                result.append(book)
+        
+        return result
