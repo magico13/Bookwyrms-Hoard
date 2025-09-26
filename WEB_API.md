@@ -1,4 +1,4 @@
-# Bookwyrms-Hoard Web API
+# Bookwyrm's Hoard Web API
 
 ## Overview
 
