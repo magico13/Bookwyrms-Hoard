@@ -6,6 +6,8 @@ import logging
 from datetime import datetime
 from typing import Dict, List, Optional, Any
 from fastapi import FastAPI, HTTPException, Query
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 import uvicorn
 
@@ -25,6 +27,9 @@ app = FastAPI(
 # Initialize storage and lookup service - these will be shared across all requests
 storage = BookshelfStorage()
 lookup_service = BookLookupService()
+
+# Mount static files for the web interface
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
 # Request/Response models
@@ -69,8 +74,14 @@ class AddBookRequest(BaseModel):
 
 
 @app.get("/")
-async def root() -> Dict[str, str]:
-    """Root endpoint with API information."""
+async def root():
+    """Serve the main kiosk interface."""
+    return FileResponse('static/index.html')
+
+
+@app.get("/api")
+async def api_info() -> Dict[str, str]:
+    """API information endpoint."""
     return {
         "message": "Bookwyrm's Hoard API",
         "version": "1.0.0",
@@ -150,29 +161,27 @@ async def lookup_book_by_isbn(isbn: str) -> Dict[str, Any]:
 
 @app.get("/api/books")
 async def search_books(
-    title: Optional[str] = Query(None, description="Search term for book title"),
-    author: Optional[str] = Query(None, description="Search term for author name")
+    q: Optional[str] = Query(None, description="search term - searches title, author, isbn")
 ) -> List[Dict[str, Any]]:
     """
-    Search books by title and/or author, or get all books if no search criteria provided.
+    Search books by query term or get all books if no search criteria provided.
     
     Args:
-        title: Optional search term for book title (case-insensitive contains)
-        author: Optional search term for author name (case-insensitive contains)
+        q: Smart search term that searches title, author, and isbn
         
     Returns:
         List of BookRecord objects as JSON dictionaries
         If no search parameters provided, returns all books in the library
     """
     try:
-        if not title and not author:
+        if q:
+            # Smart unified search
+            book_records = storage.search_books(q)
+            return [book_record.to_dict() for book_record in book_records]
+        else:
             # No search criteria - return all books
             books = storage.get_books()
             return [book_record.to_dict() for book_record in books.values()]
-        else:
-            # Search with provided criteria
-            book_records = storage.search_books(title=title, author=author)
-            return [book_record.to_dict() for book_record in book_records]
     except Exception as e:
         logger.error(f"Error searching books: {e}")
         raise HTTPException(status_code=500, detail="Internal server error during search")

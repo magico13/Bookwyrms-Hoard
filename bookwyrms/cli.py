@@ -5,7 +5,7 @@ Command line interface for Bookwyrm's Hoard.
 import logging
 import uuid
 from datetime import datetime
-from typing import List, Optional
+from typing import Optional
 import click
 from .lookup import BookLookupService
 from .models import BookInfo
@@ -442,38 +442,26 @@ def book_status(isbn: str) -> None:
 
 
 @cli.command()
-@click.option('--title', '-t', help='Search term for book title')
-@click.option('--author', '-a', help='Search term for author name')
-def search(title: Optional[str], author: Optional[str]) -> None:
-    """Search for books by title and/or author.
+@click.argument('query', required=True)
+def search(query: str) -> None:
+    """Search for books by title, author, or ISBN.
     
-    Performs case-insensitive substring matching. You can search by title only,
-    author only, or both. At least one search term must be provided.
+    Performs case-insensitive substring matching against both title and author.
+    Also supports direct ISBN lookup.
+    
+    Examples:
+        python main.py search Python
+        python main.py search "Brett Slatkin"
+        python main.py search 9780134685991
     """
-    if not title and not author:
-        click.echo("❌ Please provide at least one search term (--title or --author)")
-        return
-    
     storage = BookshelfStorage()
-    results = storage.search_books(title=title, author=author)
+    results = storage.search_books(query)
     
     if not results:
-        error_terms: List[str] = []
-        if title:
-            error_terms.append(f"title containing '{title}'")
-        if author:
-            error_terms.append(f"author containing '{author}'")
-        click.echo(f"❌ No books found matching {' and '.join(error_terms)}")
+        click.echo(f"❌ No books found matching '{query}'")
         return
     
-    # Display results
-    display_terms: List[str] = []
-    if title:
-        display_terms.append(f"title: '{title}'")
-    if author:
-        display_terms.append(f"author: '{author}'")
-    
-    click.echo(f"📚 Found {len(results)} book(s) matching {' and '.join(display_terms)}:")
+    click.echo(f"📚 Found {len(results)} book(s) matching '{query}':")
     click.echo()
     
     for book in results:

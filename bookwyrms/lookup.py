@@ -33,13 +33,14 @@ class BookLookupService:
             logger.warning(f"Invalid ISBN: {isbn}")
             return None
         
-        # Try isbnlib sources first (fast and reliable)
-        book_info = self._get_from_isbnlib(clean_isbn)
+        # Use Google Books API for more detailed info
+        book_info = self._get_from_google_books(clean_isbn)
         if book_info:
             return book_info
         
-        # Fallback to Google Books API for more detailed info
-        book_info = self._get_from_google_books(clean_isbn)
+        # Try isbnlib sources second
+        # Unfortunately it doesn't include as much data
+        book_info = self._get_from_isbnlib(clean_isbn)
         if book_info:
             return book_info
         

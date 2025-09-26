@@ -215,47 +215,43 @@ class BookshelfStorage:
                 result.append(book)
         
         return result
-    
-    def search_books(self, title: Optional[str] = None, author: Optional[str] = None) -> List[BookRecord]:
-        """Search books by title and/or author using case-insensitive contains matching.
+
+    def search_books(self, query: str) -> List[BookRecord]:
+        """Unified search that searches title, author, and ISBN with a single query.
         
         Args:
-            title: Search term for book title (optional)
-            author: Search term for author name (optional)
+            query: Search term to match against title, author, or ISBN
             
         Returns:
-            List of BookRecord objects matching the search criteria
+            List of BookRecord objects where title OR author OR ISBN contains the query
         """
-        if not title and not author:
+        if not query:
             return []
         
         books = self.get_books()
         result = []
-        
-        # Convert search terms to lowercase for case-insensitive matching
-        title_lower = title.lower() if title else None
-        author_lower = author.lower() if author else None
+        query_lower = query.lower()
         
         for book in books.values():
-            matches = True
+            # Check ISBN match (exact or contains)
+            isbn_match = False
+            if book.book_info.isbn:
+                # Clean both query and ISBN for comparison (remove hyphens/spaces)
+                clean_query = query.replace('-', '').replace(' ', '')
+                clean_isbn = book.book_info.isbn.replace('-', '').replace(' ', '')
+                isbn_match = (clean_query in clean_isbn) or (query_lower in book.book_info.isbn.lower())
             
-            # Check title match if title search term provided
-            if title_lower:
-                book_title = book.book_info.title.lower()
-                if title_lower not in book_title:
-                    matches = False
+            # Check title match
+            title_match = query_lower in book.book_info.title.lower()
             
-            # Check author match if author search term provided
-            if author_lower and matches:
-                author_match = False
-                for book_author in book.book_info.authors:
-                    if author_lower in book_author.lower():
-                        author_match = True
-                        break
-                if not author_match:
-                    matches = False
+            # Check author match
+            author_match = False
+            for book_author in book.book_info.authors:
+                if query_lower in book_author.lower():
+                    author_match = True
+                    break
             
-            if matches:
+            if isbn_match or title_match or author_match:
                 result.append(book)
         
         return result

@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bookwyrm's Hoard - Library Kiosk</title>
+    <link rel="stylesheet" href="/static/css/kiosk.css">
+</head>
+<body>
+    <div id="app">
+        <!-- Search Screen -->
+        <div id="search-screen" class="screen active">
+            <div class="search-container">
+                <h1>📚 Bookwyrm's Hoard</h1>
+                <div class="search-box">
+                    <input type="text" id="search-input" placeholder="Scan book or search..." autofocus>
+                    <button id="search-btn" class="btn btn-primary">Search</button>
+                </div>
+                <div class="search-help">
+                    <small class="text-muted">Smart search: automatically detects ISBN or searches title/author</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Search Results Screen -->
+        <div id="results-screen" class="screen">
+            <div class="results-container">
+                <div class="results-header">
+                    <h2 id="results-title">Search Results</h2>
+                    <button id="results-back-btn" class="btn btn-secondary">← Back to Search</button>
+                </div>
+                <div id="results-list">
+                    <!-- Results will be populated by JavaScript -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Book Details Screen -->
+        <div id="book-screen" class="screen">
+            <div class="book-container">
+                <!-- Book Info Column (Left - now includes actions) -->
+                <div class="book-info-column">
+                    <div id="book-info">
+                        <!-- Book info will be populated by JavaScript -->
+                    </div>
+                    <div id="book-actions">
+                        <!-- Actions will be populated by JavaScript -->
+                    </div>
+                    <button id="back-btn" class="btn btn-secondary">← Back to Search</button>
+                </div>
+
+                <!-- Shelf Column (Right) -->
+                <div class="shelf-column">
+                    <div id="shelf-info">
+                        <!-- Shelf visualization will be populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Checkout Screen -->
+        <div id="checkout-screen" class="screen">
+            <div class="checkout-container">
+                <h2>Check Out Book</h2>
+                <div id="checkout-book-info">
+                    <!-- Book info will be populated by JavaScript -->
+                </div>
+                <div class="checkout-form">
+                    <label for="checkout-name">Check out to:</label>
+                    <input type="text" id="checkout-name" placeholder="Enter person's name">
+                    <div class="checkout-actions">
+                        <button id="confirm-checkout-btn" class="btn btn-primary">Confirm Checkout</button>
+                        <button id="cancel-checkout-btn" class="btn btn-secondary">Cancel</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Checkin Screen -->
+        <div id="checkin-screen" class="screen">
+            <div class="checkin-container">
+                <h2>Check In Book</h2>
+                <div id="checkin-book-info"></div>
+                <div class="checkin-options">
+                    <button id="return-home-btn" class="btn btn-primary">Return to Home Location</button>
+                    <button id="different-location-btn" class="btn btn-secondary">Choose Different Location</button>
+                    <button id="cancel-checkin-btn" class="btn btn-secondary">Cancel</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Location Picker Screen -->
+        <div id="location-screen" class="screen">
+            <div class="location-container">
+                <h2 id="location-title">Choose Location</h2>
+                <div id="location-book-info"></div>
+                
+                <div class="location-selector">
+                    <div class="shelf-picker">
+                        <label for="room-select">Room:</label>
+                        <select id="room-select">
+                            <option value="">Select room...</option>
+                        </select>
+                        
+                        <label for="shelf-select">Shelf:</label>
+                        <select id="shelf-select" disabled>
+                            <option value="">Select shelf...</option>
+                        </select>
+                    </div>
+                    
+                    <div id="shelf-grid-container">
+                        <div id="shelf-grid"></div>
+                    </div>
+                </div>
+                
+                <div class="location-actions">
+                    <button id="confirm-location-btn" class="btn btn-primary" disabled>Confirm Location</button>
+                    <button id="cancel-location-btn" class="btn btn-secondary">Cancel</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading Overlay -->
+        <div id="loading" class="loading-overlay">
+            <div class="loading-content">
+                <div class="loading-spinner"></div>
+                <p>Loading...</p>
+            </div>
+        </div>
+
+        <!-- Error Modal -->
+        <div id="error-modal" class="modal">
+            <div class="modal-content">
+                <h3>Error</h3>
+                <p id="error-message"></p>
+                <button id="error-ok-btn" class="btn btn-primary">OK</button>
+            </div>
+        </div>
+
+        <!-- Success Modal -->
+        <div id="success-modal" class="modal">
+            <div class="modal-content">
+                <h3>Success!</h3>
+                <p id="success-message"></p>
+                <button id="success-ok-btn" class="btn btn-primary">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/api.js"></script>
+    <script src="/static/js/kiosk.js"></script>
+</body>
+</html>
