@@ -1,5 +1,5 @@
 """
-FastAPI web API for Bookwyrms-Hoard library management.
+FastAPI web API for Bookwyrm's Hoard library management.
 """
 
 import logging
@@ -10,12 +10,12 @@ from pydantic import BaseModel
 import uvicorn
 
 from .storage import BookshelfStorage
-from .shelf_models import ShelfLocation
+from .shelf_models import ShelfLocation, Bookshelf
 
 logger = logging.getLogger(__name__)
 
 app = FastAPI(
-    title="Bookwyrms-Hoard API",
+    title="Bookwyrm's Hoard API",
     description="Personal library management API with barcode scanner support",
     version="1.0.0"
 )
@@ -36,6 +36,15 @@ class CheckinRequest(BaseModel):
     bookshelf_name: Optional[str] = None
     column: Optional[int] = None
     row: Optional[int] = None
+
+
+class CreateBookshelfRequest(BaseModel):
+    """Request model for creating a new bookshelf."""
+    location: str
+    name: str
+    rows: int
+    columns: int
+    description: Optional[str] = None
 
 
 @app.get("/")
@@ -228,6 +237,126 @@ async def checkin_book(isbn: str, request: Optional[CheckinRequest] = None) -> D
     except Exception as e:
         logger.error(f"Error checking in book {isbn}: {e}")
         raise HTTPException(status_code=500, detail="Internal server error during checkin")
+
+
+@app.get("/api/shelves")
+async def get_all_shelves() -> List[Dict[str, Any]]:
+    """
+    Get all bookshelves in the library.
+    
+    Returns:
+        List of Bookshelf objects as JSON dictionaries
+    """
+    try:
+        bookshelves = storage.get_bookshelves()
+        return [bookshelf.to_dict() for bookshelf in bookshelves.values()]
+    except Exception as e:
+        logger.error(f"Error getting shelves: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error getting shelves")
+
+
+@app.get("/api/shelves/{location}/{name}")
+async def get_shelf_by_location_and_name(location: str, name: str) -> Dict[str, Any]:
+    """
+    Get a specific bookshelf by location and name.
+    
+    Args:
+        location: The location where the bookshelf is located (e.g., 'Library')
+        name: The name of the bookshelf (e.g., 'Large bookshelf')
+        
+    Returns:
+        Bookshelf as JSON dictionary
+        
+    Raises:
+        HTTPException: 404 if bookshelf not found
+    """
+    bookshelf = storage.get_bookshelf(location, name)
+    if bookshelf is None:
+        raise HTTPException(
+            status_code=404, 
+            detail=f"Bookshelf '{name}' not found in location '{location}'"
+        )
+    
+    return bookshelf.to_dict()
+
+
+@app.post("/api/shelves")
+async def create_shelf(request: CreateBookshelfRequest) -> Dict[str, Any]:
+    """
+    Create a new bookshelf.
+    
+    Args:
+        request: Create bookshelf request with location, name, dimensions, and optional description
+        
+    Returns:
+        Created Bookshelf as JSON dictionary
+        
+    Raises:
+        HTTPException: 400 if bookshelf already exists or invalid parameters
+    """
+    try:
+        # Create bookshelf object - this will validate dimensions
+        bookshelf = Bookshelf(
+            location=request.location,
+            name=request.name,
+            rows=request.rows,
+            columns=request.columns,
+            description=request.description
+        )
+        
+        # Add to storage
+        storage.add_bookshelf(bookshelf)
+        
+        return bookshelf.to_dict()
+    except ValueError as e:
+        # Handle validation errors (e.g., dimensions, duplicate shelf)
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Error creating shelf: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error creating shelf")
+
+
+@app.delete("/api/shelves/{location}/{name}")
+async def delete_shelf(location: str, name: str) -> Dict[str, str]:
+    """
+    Delete a bookshelf.
+    
+    Args:
+        location: The location where the bookshelf is located
+        name: The name of the bookshelf to delete
+        
+    Returns:
+        Success message
+        
+    Raises:
+        HTTPException: 404 if bookshelf not found, 400 if shelf has books assigned
+    """
+    try:
+        # Check if bookshelf exists
+        if not storage.get_bookshelf(location, name):
+            raise HTTPException(
+                status_code=404,
+                detail=f"Bookshelf '{name}' not found in location '{location}'"
+            )
+        
+        # Attempt to remove the bookshelf
+        success = storage.remove_bookshelf(location, name)
+        if not success:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Bookshelf '{name}' not found in location '{location}'"
+            )
+        
+        return {"message": f"Successfully deleted bookshelf '{name}' in '{location}'"}
+    except ValueError as e:
+        # Handle case where shelf has books assigned
+        raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        # Re-raise HTTP exceptions as-is
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting shelf {location}/{name}: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error deleting shelf")
 
 
 def run_server(host: str = "0.0.0.0", port: int = 8000, reload: bool = False) -> None:
