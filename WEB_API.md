@@ -80,13 +80,46 @@ curl "http://localhost:8000/api/books"
 GET /api/books/{isbn}
 ```
 
-Retrieve a specific book by its ISBN.
+Retrieve a specific book by its ISBN from your library.
 
 **Example:**
 
 ```bash
 curl "http://localhost:8000/api/books/9780134685991"
 ```
+
+**Error Cases:**
+
+- 404: Book not found in library
+
+#### Lookup Book by ISBN
+
+```http
+GET /api/lookup/{isbn}
+```
+
+Look up book information by ISBN from library or external sources. If the book exists in your library, returns the complete record with location and checkout status. If not in your library, performs external lookup and returns basic book information with `home_location: null`.
+
+**Examples:**
+
+```bash
+# Book in library - returns with location info
+curl "http://localhost:8000/api/lookup/9780134685991"
+
+# Book not in library - returns with home_location: null
+curl "http://localhost:8000/api/lookup/9780321356680"
+```
+
+**Use Cases:**
+
+- Preview book information before adding to library
+- Check if a book is already in your collection
+- Non-destructive ISBN validation
+- Mobile app integration for quick lookups
+
+**Error Cases:**
+
+- 404: Book not found anywhere (library or external sources)
 
 #### Add Book to Library
 

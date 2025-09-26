@@ -99,6 +99,55 @@ async def get_book_by_isbn(isbn: str) -> Dict[str, Any]:
     return book_record.to_dict()
 
 
+@app.get("/api/lookup/{isbn}")
+async def lookup_book_by_isbn(isbn: str) -> Dict[str, Any]:
+    """
+    Look up book information by ISBN from library or external sources.
+    
+    Returns book information in BookRecord format. If the book exists in the library,
+    returns the complete record with location and checkout status. If the book is not
+    in the library, performs external lookup and returns BookRecord format with
+    home_location=null.
+    
+    Args:
+        isbn: The ISBN of the book to look up
+        
+    Returns:
+        BookRecord as JSON dictionary (with home_location=null if not in library)
+        
+    Raises:
+        HTTPException: 404 if book not found anywhere
+    """
+    try:
+        # First check if we have it in our library
+        book_record = storage.get_book(isbn)
+        if book_record is not None:
+            return book_record.to_dict()
+        
+        # Not in library, try external lookup
+        book_info = lookup_service.get_book_info(isbn)
+        if book_info is None:
+            raise HTTPException(status_code=404, detail=f"Book with ISBN {isbn} not found")
+        
+        # Create a BookRecord-like response with null location fields
+        book_record = BookRecord(
+            book_info=book_info,
+            home_location=None,
+            checked_out_to=None,
+            checked_out_date=None,
+            notes=None
+        )
+        
+        return book_record.to_dict()
+        
+    except HTTPException:
+        # Re-raise HTTP exceptions as-is
+        raise
+    except Exception as e:
+        logger.error(f"Error looking up book {isbn}: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error during lookup")
+
+
 @app.get("/api/books")
 async def search_books(
     title: Optional[str] = Query(None, description="Search term for book title"),
