@@ -8,9 +8,11 @@ A CLI tool for managing book collections and tracking shelf locations.
 - **Barcode Scanner Support**: Works with any barcode scanner that acts like a keyboard
 - **Multiple Data Sources**: Uses Google Books API, Open Library, and other sources
 - **Interactive Mode**: Perfect for scanning multiple books in succession
+- **Book Search**: Search your library by title and/or author
 - **Shelf Management**: Create and organize bookshelves with grid-based locations
 - **Book Location Tracking**: Track where each book is located on your shelves
 - **Check-out System**: Check books out to people and track due dates
+- **Web API**: Complete REST API for programmatic access
 - **JSON Storage**: Portable data storage that works with version control
 
 ## Installation
@@ -101,11 +103,31 @@ Books and shelf information are stored in JSON files in the `data/` directory:
 - `data/books.json`: Book records with locations and checkout status
 - `data/bookshelves.json`: Bookshelf definitions and configurations
 
+## Web API
+
+A full REST API is available for programmatic access to your library:
+
+```bash
+# Start the web API server
+python main.py web
+
+# Or with auto-reload for development
+python main.py web --reload
+```
+
+**Features:**
+
+- **Complete book management**: Add, search, checkout, and check-in books
+- **Shelf management**: Create, list, and delete bookshelves
+- **ISBN lookup integration**: Automatic book metadata retrieval
+- **Interactive documentation**: Available at `http://localhost:8000/docs`
+
+See [WEB_API.md](WEB_API.md) for complete API documentation and examples.
+
 ## Future Features
 
-- [ ] Search books by title/author
 - [ ] Import/export collection data
-- [ ] Web interface
+- [ ] Web interface frontend
 
 ## Development
 

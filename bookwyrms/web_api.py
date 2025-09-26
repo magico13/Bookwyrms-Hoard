@@ -10,7 +10,9 @@ from pydantic import BaseModel
 import uvicorn
 
 from .storage import BookshelfStorage
-from .shelf_models import ShelfLocation, Bookshelf
+from .shelf_models import ShelfLocation, Bookshelf, BookRecord
+from .lookup import BookLookupService
+from .models import BookInfo
 
 logger = logging.getLogger(__name__)
 
@@ -20,8 +22,9 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Initialize storage - this will be shared across all requests
+# Initialize storage and lookup service - these will be shared across all requests
 storage = BookshelfStorage()
+lookup_service = BookLookupService()
 
 
 # Request/Response models
@@ -47,11 +50,29 @@ class CreateBookshelfRequest(BaseModel):
     description: Optional[str] = None
 
 
+class AddBookRequest(BaseModel):
+    """Request model for adding a new book to the library."""
+    isbn: Optional[str] = None  # For ISBN lookup
+    # Manual entry fields (used if ISBN lookup fails or ISBN not provided)
+    title: Optional[str] = None
+    authors: Optional[List[str]] = None
+    publisher: Optional[str] = None
+    published_date: Optional[str] = None
+    description: Optional[str] = None
+    # Optional shelf location
+    location: Optional[str] = None
+    bookshelf_name: Optional[str] = None
+    column: Optional[int] = None
+    row: Optional[int] = None
+    # Optional notes
+    notes: Optional[str] = None
+
+
 @app.get("/")
 async def root() -> Dict[str, str]:
     """Root endpoint with API information."""
     return {
-        "message": "Bookwyrms-Hoard API",
+        "message": "Bookwyrm's Hoard API",
         "version": "1.0.0",
         "docs": "/docs"
     }
@@ -106,6 +127,128 @@ async def search_books(
     except Exception as e:
         logger.error(f"Error searching books: {e}")
         raise HTTPException(status_code=500, detail="Internal server error during search")
+
+
+@app.post("/api/books")
+async def add_book(request: AddBookRequest) -> Dict[str, Any]:
+    """
+    Add a new book to the library.
+    
+    Args:
+        request: Add book request with ISBN (for lookup) or manual book details,
+                plus optional shelf location
+                
+    Returns:
+        Created BookRecord as JSON dictionary
+        
+    Raises:
+        HTTPException: 400 if invalid parameters or book already exists
+    """
+    try:
+        book_info: Optional[BookInfo] = None
+        
+        # Try ISBN lookup first if provided
+        if request.isbn:
+            book_info = lookup_service.get_book_info(request.isbn)
+            if not book_info:
+                # ISBN lookup failed, but we can try manual entry
+                if not request.title:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"ISBN {request.isbn} not found and no manual title provided"
+                    )
+        
+        # Use manual entry if no ISBN or ISBN lookup failed
+        if not book_info:
+            if not request.title:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Either ISBN or title must be provided"
+                )
+            
+            # Generate fake ISBN if none provided
+            isbn_to_use = request.isbn
+            if not isbn_to_use:
+                import uuid
+                fake_id = str(uuid.uuid4()).replace('-', '')[:10]
+                isbn_to_use = f"FAKE{fake_id}"
+            
+            book_info = BookInfo(
+                isbn=isbn_to_use,
+                title=request.title,
+                authors=request.authors or ["Unknown Author"],
+                publisher=request.publisher,
+                published_date=request.published_date,
+                description=request.description
+            )
+        
+        # Check if book already exists
+        existing_book = storage.get_book(book_info.isbn)
+        if existing_book:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Book with ISBN {book_info.isbn} already exists in library"
+            )
+        
+        # Handle optional shelf location
+        shelf_location: Optional[ShelfLocation] = None
+        if all([request.location, request.bookshelf_name, 
+                request.column is not None, request.row is not None]):
+            
+            # Type assertions - we know these are not None after validation above
+            location = request.location
+            bookshelf_name = request.bookshelf_name
+            column = request.column
+            row = request.row
+            assert location is not None and bookshelf_name is not None
+            assert column is not None and row is not None
+            
+            # Validate that the bookshelf exists and position is valid
+            bookshelf = storage.get_bookshelf(location, bookshelf_name)
+            if bookshelf is None:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Bookshelf '{bookshelf_name}' not found in location '{location}'"
+                )
+            
+            # Validate position is within bookshelf bounds
+            if not (0 <= column < bookshelf.columns):
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Column {column} is out of bounds for bookshelf (0-{bookshelf.columns - 1})"
+                )
+            
+            if not (0 <= row < bookshelf.rows):
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Row {row} is out of bounds for bookshelf (0-{bookshelf.rows - 1})"
+                )
+            
+            shelf_location = ShelfLocation(
+                location=location,
+                bookshelf_name=bookshelf_name,
+                column=column,
+                row=row
+            )
+        
+        # Create book record
+        book_record = BookRecord(
+            book_info=book_info,
+            home_location=shelf_location,
+            notes=request.notes
+        )
+        
+        # Save to storage
+        storage.add_or_update_book(book_record)
+        
+        return book_record.to_dict()
+        
+    except HTTPException:
+        # Re-raise HTTP exceptions as-is
+        raise
+    except Exception as e:
+        logger.error(f"Error adding book: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error adding book")
 
 
 @app.get("/api/health")
