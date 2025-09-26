@@ -47,11 +47,47 @@ Follow the Click pattern in `cli.py`:
 3. Call `BookLookupService().get_book_info()` for ISBN lookups
 4. Display with `_display_book_info()` or `_display_brief_book_info()`
 
+## Web API
+
+### FastAPI REST API
+- `bookwyrms/web_api.py` - FastAPI server with full CRUD operations
+- **Start server**: `python main.py web [--reload]`
+- **Documentation**: Available at `http://localhost:8000/docs`
+- **Endpoints**: Search books, get by ISBN, checkout/checkin with optional relocation
+
+### Test Data System
+**CRITICAL**: Always use test data for API testing to protect production library data:
+
+```bash
+# Switch to safe test data (5 books, 2 shelves)
+./switch_data.sh test
+
+# Check current data status  
+./switch_data.sh status
+
+# Run comprehensive API tests
+python test_api_comprehensive.py
+
+# Switch back to production data
+./switch_data.sh production
+```
+
+**Test ISBNs available:**
+- `9780134685991` - Effective Python (available)
+- `TEST123456789` - The Art of Testing APIs (available) 
+- `CHECKED456789` - Pre-checked out book (for error testing)
+
+**Data Files:**
+- `data/books.json` / `data/bookshelves.json` - Active data (what API uses)
+- `data/books_production.json` / `data/bookshelves_production.json` - Production backup
+- `data/books_test.json` / `data/bookshelves_test.json` - Safe test dataset
+
 ## Key Integration Points
 
 - **External APIs**: Google Books API, Open Library (via isbnlib)
 - **File System**: JSON files in `data/` directory (created automatically)
 - **User Input**: Interactive barcode scanning via `shelf stock` command, manual book entry via `_collect_manual_book_info()`
+- **Web API**: FastAPI server for REST operations and web interface integration
 
 ## Common Operations
 

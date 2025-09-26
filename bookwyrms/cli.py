@@ -494,5 +494,33 @@ def search(title: Optional[str], author: Optional[str]) -> None:
         click.echo()
 
 
+@cli.command()
+@click.option('--host', default='0.0.0.0', help='Host to bind to (default: 0.0.0.0)')
+@click.option('--port', default=8000, type=int, help='Port to bind to (default: 8000)')
+@click.option('--reload', is_flag=True, help='Enable auto-reload for development')
+def web(host: str, port: int, reload: bool) -> None:
+    """Start the web API server.
+    
+    Provides REST API endpoints for searching books and managing the library.
+    Access the interactive API documentation at http://host:port/docs
+    """
+    try:
+        from .web_api import run_server
+        click.echo(f"🚀 Starting Bookwyrms-Hoard API server...")
+        click.echo(f"📡 Server will be available at: http://{host}:{port}")
+        click.echo(f"📚 API documentation at: http://{host}:{port}/docs")
+        if reload:
+            click.echo("🔄 Auto-reload enabled for development")
+        click.echo()
+        run_server(host=host, port=port, reload=reload)
+    except ImportError:
+        click.echo("❌ FastAPI dependencies not installed.")
+        click.echo("📦 Install with: pip install fastapi uvicorn")
+        raise click.Abort()
+    except Exception as e:
+        click.echo(f"❌ Failed to start server: {e}")
+        raise click.Abort()
+
+
 if __name__ == '__main__':
     cli()

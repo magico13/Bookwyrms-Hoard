@@ -1,8 +1,11 @@
 isbnlib>=3.10.14
 requests>=2.32.5
-click>=8.2.1
+click>=8.3.0
 setuptools>=80.9.0
+fastapi>=0.115.0
+uvicorn>=0.31.0
 
 # Development dependencies
-mypy>=1.18.1
+mypy>=1.18.2
 types-requests>=2.32.4
+types-uvicorn>=0.15.0
