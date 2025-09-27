@@ -1,4 +1,4 @@
-/* Kiosk CSS - Optimized for 800x480 touchscreen - Larger shelf grids for kiosk */
+/* Kiosk CSS - Optimized for 800x480 touchscreen - Fixed scrollbar overlap */
 :root {
     --bg-primary: #000000;
     --bg-secondary: #1a1a1a;
@@ -447,12 +447,16 @@ body {
     min-height: 200px;
     overflow: auto; /* Allow scrolling if grid is too large */
     width: 100%;
+    padding-right: 15px; /* Account for scrollbar */
+    margin-right: -15px; /* Negative margin to maintain container width */
 }
 
 .location-actions {
     display: flex;
     gap: 15px;
     justify-content: center;
+    margin-top: 20px;
+    padding: 0 15px; /* Add padding to prevent button overlap with scrollbar */
 }
 
 /* Loading Overlay */
@@ -797,5 +801,20 @@ body {
     
     #back-btn {
         margin-top: 10px;
+    }
+    
+    /* Fix scrollbar overlap in location picker */
+    #shelf-grid-container {
+        padding-right: 20px;
+        margin-right: -20px;
+    }
+    
+    .location-actions {
+        padding: 0 20px;
+        margin-top: 15px;
+    }
+    
+    .shelf-picker {
+        padding: 0 10px; /* Prevent select dropdowns from being cut off */
     }
 }
