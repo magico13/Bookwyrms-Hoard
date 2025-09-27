@@ -1,4 +1,4 @@
-/* Kiosk CSS - Optimized for 800x480 touchscreen */
+/* Kiosk CSS - Optimized for 800x480 touchscreen - Fixed kiosk horizontal layout */
 :root {
     --bg-primary: #000000;
     --bg-secondary: #1a1a1a;
@@ -720,16 +720,22 @@ body {
 /* Kiosk display adjustments (around 800x480) */
 @media (max-width: 900px) and (max-height: 600px) {
     .book-container {
-        flex-direction: column;
+        flex-direction: row; /* Keep horizontal layout for kiosk */
         height: auto;
         min-height: calc(100vh - 40px); /* Account for padding */
         gap: 10px;
     }
     
-    .book-info-column, .shelf-column {
-        flex: none;
-        max-width: none;
-        min-width: auto;
+    .book-info-column {
+        flex: 1; /* Take remaining space */
+        min-width: 250px;
+        padding: 15px; /* Reduce padding to save space */
+    }
+    
+    .shelf-column {
+        flex: 0 0 auto; /* Don't grow, don't shrink, auto width */
+        max-width: 300px;
+        min-width: 200px;
         padding: 15px; /* Reduce padding to save space */
     }
     
