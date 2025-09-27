@@ -1,4 +1,4 @@
-/* Kiosk CSS - Optimized for 800x480 touchscreen - Fixed kiosk horizontal layout */
+/* Kiosk CSS - Optimized for 800x480 touchscreen - Larger shelf grids for kiosk */
 :root {
     --bg-primary: #000000;
     --bg-secondary: #1a1a1a;
@@ -290,29 +290,29 @@ body {
     overflow: auto; /* Allow scrolling if too large */
 }
 
-/* Special handling for different shelf sizes - more compact */
+/* Special handling for different shelf sizes - larger for kiosk */
 .shelf-grid[style*="repeat(1,"] {
-    max-width: 60px;
+    max-width: 80px;
 }
 
 .shelf-grid[style*="repeat(2,"] {
-    max-width: 110px;
-}
-
-.shelf-grid[style*="repeat(3,"] {
     max-width: 160px;
 }
 
+.shelf-grid[style*="repeat(3,"] {
+    max-width: 240px;
+}
+
 .shelf-grid[style*="repeat(4,"] {
-    max-width: 210px;
+    max-width: 320px;
 }
 
 .shelf-grid[style*="repeat(5,"] {
-    max-width: 260px;
+    max-width: 400px;
 }
 
 .shelf-grid[style*="repeat(6,"] {
-    max-width: 310px;
+    max-width: 480px;
 }
 
 .shelf-cell {
@@ -734,8 +734,8 @@ body {
     
     .shelf-column {
         flex: 0 0 auto; /* Don't grow, don't shrink, auto width */
-        max-width: 300px;
-        min-width: 200px;
+        max-width: 400px;
+        min-width: 250px;
         padding: 15px; /* Reduce padding to save space */
     }
     
@@ -752,19 +752,19 @@ body {
     }
     
     .shelf-grid {
-        gap: 1px;
-        padding: 5px;
+        gap: 3px;
+        padding: 10px;
     }
     
     .shelf-cell {
-        min-height: 20px;
-        min-width: 20px;
-        max-height: 30px;
-        max-width: 30px;
-        height: 25px;
-        width: 25px;
-        font-size: 9px;
-        border-radius: 3px;
+        min-height: 45px;
+        min-width: 45px;
+        max-height: 65px;
+        max-width: 65px;
+        height: 55px;
+        width: 55px;
+        font-size: 16px;
+        border-radius: 6px;
     }
     
     /* Very compact grid for kiosk displays with wide shelves */
@@ -777,16 +777,16 @@ body {
     }
     
     .shelf-grid[style*="repeat(4,"] .shelf-cell {
-        height: 20px;
-        width: 20px;
-        font-size: 8px;
+        height: 45px;
+        width: 45px;
+        font-size: 14px;
     }
     
     .shelf-grid[style*="repeat(5,"] .shelf-cell,
     .shelf-grid[style*="repeat(6,"] .shelf-cell {
-        height: 18px;
-        width: 18px;
-        font-size: 7px;
+        height: 40px;
+        width: 40px;
+        font-size: 12px;
     }
     
     /* Ensure buttons remain visible */
