@@ -657,10 +657,13 @@ body {
         overflow-y: auto;
     }
     
-    /* Keep search screen centered */
+    /* Ensure search screen stays centered on mobile */
     #search-screen {
         position: absolute;
         height: 100%;
+    }
+    
+    #search-screen.active {
         display: flex;
         align-items: center;
         justify-content: center;
