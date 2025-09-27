@@ -1,5 +1,5 @@
 """
-Main entry point for Bookwyrms Hoard CLI.
+Main entry point for Bookwyrm's Hoard CLI.
 """
 
 from bookwyrms.cli import cli

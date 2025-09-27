@@ -1,5 +1,5 @@
 #!/bin/bash
-# Script to switch between production and test data for Bookwyrms-Hoard
+# Script to switch between production and test data for Bookwyrm's Hoard
 
 DATA_DIR="data"
 
@@ -69,7 +69,7 @@ case "$1" in
         echo "   Shelves: $(jq 'length' "$DATA_DIR/bookshelves.json" 2>/dev/null || echo "unknown") entries"
         ;;
     *)
-        echo "📚 Bookwyrms-Hoard Data Switcher"
+        echo "📚 Bookwyrm's Hoard Data Switcher"
         echo ""
         echo "Usage: $0 [command]"
         echo ""

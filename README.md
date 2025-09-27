@@ -8,7 +8,7 @@ A CLI tool for managing book collections and tracking shelf locations.
 - **Barcode Scanner Support**: Works with any barcode scanner that acts like a keyboard
 - **Multiple Data Sources**: Uses Google Books API, Open Library, and other sources
 - **Interactive Mode**: Perfect for scanning multiple books in succession
-- **Book Search**: Search your library by title and/or author
+- **Smart Search**: Search your library by ISBN, title, or author with intelligent detection
 - **Shelf Management**: Create and organize bookshelves with grid-based locations
 - **Book Location Tracking**: Track where each book is located on your shelves
 - **Check-out System**: Check books out to people and track due dates
@@ -123,6 +123,54 @@ python main.py web --reload
 - **Interactive documentation**: Available at `http://localhost:8000/docs`
 
 See [WEB_API.md](WEB_API.md) for complete API documentation and examples.
+
+## Docker Deployment
+
+The easiest way to run Bookwyrm's Hoard is using Docker:
+
+### Quick Start
+
+```bash
+# Clone the repository
+git clone https://github.com/magico13/Bookwyrms-Hoard.git
+cd Bookwyrms-Hoard
+
+# Start the web server
+docker-compose up --build
+```
+
+The web interface will be available at `http://localhost:8000`
+
+### Docker Commands
+
+```bash
+# Build and start the container
+docker-compose up --build
+
+# Run in the background
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+
+# Stop the container
+docker-compose down
+```
+
+### Data Persistence
+
+Your library data is stored in the `data/` directory and automatically persists between container restarts. The `data/` directory will be created automatically when you first run the container.
+
+**Note**: The Docker container uses `requirements-docker.txt` which includes only production dependencies, excluding development tools like mypy and type stubs.
+
+### Custom Configuration
+
+You can customize the port by editing the `docker-compose.yml` file:
+
+```yaml
+ports:
+  - "3000:8000"  # Access on port 3000 instead of 8000
+```
 
 ## Future Features
 

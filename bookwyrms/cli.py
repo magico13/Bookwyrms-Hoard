@@ -494,7 +494,7 @@ def web(host: str, port: int, reload: bool) -> None:
     """
     try:
         from .web_api import run_server
-        click.echo(f"🚀 Starting Bookwyrms-Hoard API server...")
+        click.echo(f"🚀 Starting Bookwyrm's Hoard API server...")
         click.echo(f"📡 Server will be available at: http://{host}:{port}")
         click.echo(f"📚 API documentation at: http://{host}:{port}/docs")
         if reload:

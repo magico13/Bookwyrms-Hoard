@@ -1,4 +1,4 @@
-# Bookwyrms-Hoard AI Coding Instructions
+# Bookwyrm's Hoard AI Coding Instructions
 
 ## Architecture Overview
 

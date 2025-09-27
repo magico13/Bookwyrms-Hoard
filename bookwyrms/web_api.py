@@ -74,7 +74,7 @@ class AddBookRequest(BaseModel):
 
 
 @app.get("/")
-async def root():
+async def root() -> FileResponse:
     """Serve the main kiosk interface."""
     return FileResponse('static/index.html')
 

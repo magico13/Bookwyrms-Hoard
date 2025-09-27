@@ -49,29 +49,36 @@ FastAPI automatically generates interactive API documentation:
 #### Search Books / Get All Books
 
 ```http
-GET /api/books?title=<search_term>&author=<search_term>
+GET /api/books?q=<search_term>
 ```
 
-Search for books by title and/or author using case-insensitive substring matching, or get all books if no search criteria provided.
+Smart search for books using case-insensitive substring matching. Automatically detects ISBN format or searches title/author text, or get all books if no search criteria provided.
 
 **Parameters:**
 
-- `title` (optional): Search term for book title
-- `author` (optional): Search term for author name
+- `q` (optional): Smart search term - automatically searches:
+  - **ISBN**: When query matches ISBN-10 or ISBN-13 format
+  - **Title/Author**: Text search across book titles and author names
+- `limit` (optional): Maximum number of results to return
+- `offset` (optional): Number of results to skip (for pagination)
 
 If no parameters are provided, returns all books in the library.
 
 **Examples:**
 
 ```bash
-# Search by title and author
-curl "http://localhost:8000/api/books?title=python&author=martin"
+# Search by ISBN
+curl "http://localhost:8000/api/books?q=9780134685991"
 
-# Search by title only
-curl "http://localhost:8000/api/books?title=python"
+# Search by title or author
+curl "http://localhost:8000/api/books?q=python"
+curl "http://localhost:8000/api/books?q=Martin"
 
 # Get all books (no parameters)
 curl "http://localhost:8000/api/books"
+
+# Limit results
+curl "http://localhost:8000/api/books?q=python&limit=5"
 ```
 
 #### Get Book by ISBN

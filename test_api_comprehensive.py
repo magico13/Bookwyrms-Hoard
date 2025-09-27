@@ -65,7 +65,7 @@ def main() -> None:
     """Comprehensive test of all API endpoints using test data."""
     base_url = "http://localhost:8000"
     
-    print("🧪 COMPREHENSIVE Bookwyrms-Hoard API Test with TEST DATA")
+    print("🧪 COMPREHENSIVE Bookwyrm's Hoard API Test with TEST DATA")
     print("=" * 70)
     
     all_passed = True
@@ -86,9 +86,9 @@ def main() -> None:
     print("\n📚 Book Search & Retrieval:")
     book_search_tests = [
         (f"{base_url}/api/books", "GET", None, 200),  # Get all books
-        (f"{base_url}/api/books?title=python", "GET", None, 200),  # Search by title
-        (f"{base_url}/api/books?author=slatkin", "GET", None, 200),  # Search by author
-        (f"{base_url}/api/books?title=algorithms&author=cormen", "GET", None, 200),  # Combined search
+        (f"{base_url}/api/books?q=python", "GET", None, 200),  # Smart search by title/author
+        (f"{base_url}/api/books?q=9780134685991", "GET", None, 200),  # Smart search by ISBN
+        (f"{base_url}/api/books?q=effective", "GET", None, 200),  # Smart search text
         (f"{base_url}/api/books/9780134685991", "GET", None, 200),  # Get existing book
         (f"{base_url}/api/books/NONEXISTENT", "GET", None, 404),  # Get non-existent book
     ]
