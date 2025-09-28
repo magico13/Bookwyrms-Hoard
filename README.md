@@ -24,6 +24,16 @@ A CLI tool for managing book collections and tracking shelf locations.
    pip install -r requirements.txt
    ```
 
+3. **Optional**: Set up Google Books API key for higher rate limits:
+   - Copy `.env.example` to `.env`
+   - Get an API key from [Google Cloud Console](https://console.cloud.google.com/)
+   - Enable the Books API in your project
+   - Add your API key to the `.env` file:
+
+     ```bash
+     GOOGLE_BOOKS_API_KEY=your_api_key_here
+     ```
+
 ## Usage
 
 ### Single Book Lookup
@@ -31,14 +41,6 @@ A CLI tool for managing book collections and tracking shelf locations.
 ```bash
 python main.py lookup 9780134685991
 ```
-
-### Interactive Scanner Mode
-
-```bash
-python main.py interactive
-```
-
-This will start an interactive session where you can scan book barcodes one after another. Perfect for use with a dedicated barcode scanner.
 
 ### Bookshelf Management
 

@@ -5,11 +5,11 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "main.py Interactive",
+            "name": "main.py lookup",
             "type": "debugpy",
             "request": "launch",
             "program": "main.py",
-            "args": ["interactive"],
+            "args": ["lookup", "9780132350884"],
             "console": "integratedTerminal"
         },
         {

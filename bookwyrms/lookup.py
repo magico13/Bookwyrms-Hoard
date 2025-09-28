@@ -3,6 +3,7 @@ Book information lookup services using ISBN.
 """
 
 import logging
+import os
 from typing import Optional, Dict, Any
 import isbnlib
 import requests
@@ -17,6 +18,7 @@ class BookLookupService:
     def __init__(self) -> None:
         """Initialize the lookup service."""
         self.google_books_base_url: str = "https://www.googleapis.com/books/v1/volumes"
+        self.google_books_api_key: Optional[str] = os.getenv('GOOGLE_BOOKS_API_KEY')
     
     def get_book_info(self, isbn: str) -> Optional[BookInfo]:
         """Get book information from ISBN using multiple sources.
@@ -71,6 +73,8 @@ class BookLookupService:
         """Get book info from Google Books API directly."""
         try:
             url = f"{self.google_books_base_url}?q=isbn:{isbn}"
+            if self.google_books_api_key:
+                url += f"&key={self.google_books_api_key}"
             response = requests.get(url, timeout=10)
             response.raise_for_status()
             

@@ -42,3 +42,19 @@ class BookInfo:
             "cover_url": self.cover_url,
             "language": self.language
         }
+    
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> 'BookInfo':
+        """Create BookInfo from dictionary."""
+        return cls(
+            isbn=data["isbn"],
+            title=data["title"],
+            authors=data["authors"],
+            publisher=data.get("publisher"),
+            published_date=data.get("published_date"),
+            description=data.get("description"),
+            genres=data.get("genres"),
+            page_count=data.get("page_count"),
+            cover_url=data.get("cover_url"),
+            language=data.get("language")
+        )
