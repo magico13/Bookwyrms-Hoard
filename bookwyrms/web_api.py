@@ -4,7 +4,7 @@ FastAPI web API for Bookwyrm's Hoard library management.
 
 import logging
 from datetime import datetime
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -46,7 +46,10 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 mcp = FastApiMCP(
     app,
     include_tags=["mcp"],
-    name="Bookwyrm's Hoard MCP",)
+    name="Bookwyrm's Hoard MCP",
+    description="MCP server for Bookwyrm's Hoard library management. Each bookshelf is a multi-shelf grid structure with rows and columns (e.g., a 5x4 bookshelf has 20 individual shelves arranged in a grid). Each shelf in the grid can hold multiple books and is identified by (column, row) coordinates that are 0-indexed from top-left.",
+    describe_full_response_schema=True
+)
 # Mount the MCP server directly to your FastAPI app
 mcp.mount()
 
@@ -57,19 +60,19 @@ class CheckoutRequest(BaseModel):
 
 
 class CheckinRequest(BaseModel):
-    """Request model for checking in a book, optionally to a new location."""
-    location: Optional[str] = None
-    bookshelf_name: Optional[str] = None
-    column: Optional[int] = None
-    row: Optional[int] = None
+    """Request model for checking in a book, optionally to a new shelf on a bookshelf structure."""
+    location: Optional[str] = None  # Physical location like 'Library' or 'Office'
+    bookshelf_name: Optional[str] = None  # Name of the specific bookshelf structure in that location
+    column: Optional[int] = None  # Column coordinate (0-indexed from left) of the individual shelf
+    row: Optional[int] = None  # Row coordinate (0-indexed from top) of the individual shelf
 
 
 class CreateBookshelfRequest(BaseModel):
-    """Request model for creating a new bookshelf."""
-    location: str
-    name: str
-    rows: int
-    columns: int
+    """Request model for creating a new bookshelf structure with multiple shelves arranged in a grid."""
+    location: str  # Physical location like 'Library' or 'Office'
+    name: str  # Name of the bookshelf structure (e.g., 'Large bookshelf')
+    rows: int  # Number of rows of shelves in the grid (creates rows * columns total shelves)
+    columns: int  # Number of columns of shelves in the grid
     description: Optional[str] = None
 
 
@@ -82,13 +85,103 @@ class AddBookRequest(BaseModel):
     publisher: Optional[str] = None
     published_date: Optional[str] = None
     description: Optional[str] = None
-    # Optional shelf location
-    location: Optional[str] = None
-    bookshelf_name: Optional[str] = None
-    column: Optional[int] = None
-    row: Optional[int] = None
+    # Optional shelf location (all 4 fields required if specifying a shelf)
+    location: Optional[str] = None  # Physical location like 'Library' or 'Office'
+    bookshelf_name: Optional[str] = None  # Name of the specific bookshelf structure
+    column: Optional[int] = None  # Column coordinate (0-indexed from left) of the individual shelf
+    row: Optional[int] = None  # Row coordinate (0-indexed from top) of the individual shelf
     # Optional notes
     notes: Optional[str] = None
+
+
+# Response models for MCP server schema generation
+class ShelfLocationResponse(BaseModel):
+    """Response model for shelf location information."""
+    location: str  # Physical location like 'Library' or 'Office'
+    bookshelf_name: str  # Name of the bookshelf structure
+    column: int  # Column coordinate (0-indexed from left) of the individual shelf
+    row: int  # Row coordinate (0-indexed from top) of the individual shelf
+
+
+class BookInfoResponse(BaseModel):
+    """Response model for book information."""
+    isbn: str
+    title: str
+    authors: List[str]
+    publisher: Optional[str] = None
+    published_date: Optional[str] = None
+    description: Optional[str] = None
+    genres: Optional[List[str]] = None
+    page_count: Optional[int] = None
+    cover_url: Optional[str] = None
+    language: Optional[str] = None
+
+
+class BookRecordResponse(BaseModel):
+    """Response model for complete book record with location and checkout info."""
+    book_info: BookInfoResponse
+    home_location: Optional[ShelfLocationResponse] = None
+    checked_out_to: Optional[str] = None
+    checked_out_date: Optional[str] = None
+    notes: Optional[str] = None
+
+
+class BookshelfResponse(BaseModel):
+    """Response model for bookshelf structure information."""
+    location: str  # Physical location like 'Library' or 'Office'
+    name: str  # Name of the bookshelf structure
+    rows: int  # Number of rows of shelves in the grid
+    columns: int  # Number of columns of shelves in the grid
+    description: Optional[str] = None
+
+
+# Helper functions to convert domain objects to response models
+def _shelf_location_to_response(location: ShelfLocation) -> ShelfLocationResponse:
+    """Convert ShelfLocation to response model."""
+    return ShelfLocationResponse(
+        location=location.location,
+        bookshelf_name=location.bookshelf_name,
+        column=location.column,
+        row=location.row
+    )
+
+
+def _book_info_to_response(book_info: BookInfo) -> BookInfoResponse:
+    """Convert BookInfo to response model."""
+    return BookInfoResponse(
+        isbn=book_info.isbn,
+        title=book_info.title,
+        authors=book_info.authors,
+        publisher=book_info.publisher,
+        published_date=book_info.published_date,
+        description=book_info.description,
+        genres=book_info.genres,
+        page_count=book_info.page_count,
+        cover_url=book_info.cover_url,
+        language=book_info.language
+    )
+
+
+def _book_record_to_response(record: BookRecord) -> BookRecordResponse:
+    """Convert BookRecord to response model."""
+    return BookRecordResponse(
+        book_info=_book_info_to_response(record.book_info),
+        home_location=_shelf_location_to_response(record.home_location) if record.home_location else None,
+        checked_out_to=record.checked_out_to,
+        checked_out_date=record.checked_out_date,
+        notes=record.notes
+    )
+
+
+def _bookshelf_to_response(bookshelf: Bookshelf) -> BookshelfResponse:
+    """Convert Bookshelf to response model."""
+    return BookshelfResponse(
+        location=bookshelf.location,
+        name=bookshelf.name,
+        rows=bookshelf.rows,
+        columns=bookshelf.columns,
+        description=bookshelf.description
+    )
 
 
 @app.get("/")
@@ -108,7 +201,7 @@ async def api_info() -> Dict[str, str]:
 
 
 @app.get("/api/books/{isbn}")
-async def get_book_by_isbn(isbn: str) -> Dict[str, Any]:
+async def get_book_by_isbn(isbn: str) -> BookRecordResponse:
     """
     Get a specific book by ISBN.
     
@@ -125,11 +218,11 @@ async def get_book_by_isbn(isbn: str) -> Dict[str, Any]:
     if book_record is None:
         raise HTTPException(status_code=404, detail=f"Book with ISBN {isbn} not found")
     
-    return book_record.to_dict()
+    return _book_record_to_response(book_record)
 
 
 @app.get("/api/lookup/{isbn}")
-async def lookup_book_by_isbn(isbn: str) -> Dict[str, Any]:
+async def lookup_book_by_isbn(isbn: str) -> BookRecordResponse:
     """
     Look up book information by ISBN from library or external sources.
     
@@ -151,7 +244,7 @@ async def lookup_book_by_isbn(isbn: str) -> Dict[str, Any]:
         # First check if we have it in our library
         book_record = storage.get_book(isbn)
         if book_record is not None:
-            return book_record.to_dict()
+            return _book_record_to_response(book_record)
         
         # Not in library, try external lookup
         book_info = lookup_service.get_book_info(isbn)
@@ -167,7 +260,7 @@ async def lookup_book_by_isbn(isbn: str) -> Dict[str, Any]:
             notes=None
         )
         
-        return book_record.to_dict()
+        return _book_record_to_response(book_record)
         
     except HTTPException:
         # Re-raise HTTP exceptions as-is
@@ -180,9 +273,10 @@ async def lookup_book_by_isbn(isbn: str) -> Dict[str, Any]:
 @app.get("/api/books", tags=["mcp"])
 async def search_books(
     q: Optional[str] = Query(None, description="search term - searches title, author, isbn")
-) -> List[Dict[str, Any]]:
+) -> List[BookRecordResponse]:
     """
-    Search books by query term or get all books if no search criteria provided.
+    Search books by query term or get all books if no search criteria provided. Case insensitive.
+    Fields are ANDed together if multiple terms provided, not ORed.
     
     Args:
         q: Smart search term that searches title, author, and isbn
@@ -195,30 +289,30 @@ async def search_books(
         if q:
             # Smart unified search
             book_records = storage.search_books(q)
-            return [book_record.to_dict() for book_record in book_records]
+            return [_book_record_to_response(book_record) for book_record in book_records]
         else:
             # No search criteria - return all books
             books = storage.get_books()
-            return [book_record.to_dict() for book_record in books.values()]
+            return [_book_record_to_response(book_record) for book_record in books.values()]
     except Exception as e:
         logger.error(f"Error searching books: {e}")
         raise HTTPException(status_code=500, detail="Internal server error during search")
 
 
 @app.post("/api/books")
-async def add_book(request: AddBookRequest) -> Dict[str, Any]:
+async def add_book(request: AddBookRequest) -> BookRecordResponse:
     """
-    Add a new book to the library.
+    Add a new book to the library, optionally placing it on a specific shelf.
     
     Args:
         request: Add book request with ISBN (for lookup) or manual book details,
-                plus optional shelf location
+                plus optional shelf location (location, bookshelf_name, column, row)
                 
     Returns:
         Created BookRecord as JSON dictionary
         
     Raises:
-        HTTPException: 400 if invalid parameters or book already exists
+        HTTPException: 400 if invalid parameters, book already exists, or shelf coordinates are invalid
     """
     try:
         book_info: Optional[BookInfo] = None
@@ -287,7 +381,7 @@ async def add_book(request: AddBookRequest) -> Dict[str, Any]:
                     detail=f"Bookshelf '{bookshelf_name}' not found in location '{location}'"
                 )
             
-            # Validate position is within bookshelf bounds
+            # Validate shelf coordinates are within bookshelf bounds
             if not (0 <= column < bookshelf.columns):
                 raise HTTPException(
                     status_code=400,
@@ -317,7 +411,7 @@ async def add_book(request: AddBookRequest) -> Dict[str, Any]:
         # Save to storage
         storage.add_or_update_book(book_record)
         
-        return book_record.to_dict()
+        return _book_record_to_response(book_record)
         
     except HTTPException:
         # Re-raise HTTP exceptions as-is
@@ -334,7 +428,7 @@ async def health_check() -> Dict[str, str]:
 
 
 @app.post("/api/books/{isbn}/checkout")
-async def checkout_book(isbn: str, request: CheckoutRequest) -> Dict[str, Any]:
+async def checkout_book(isbn: str, request: CheckoutRequest) -> BookRecordResponse:
     """
     Check out a book to a person.
     
@@ -366,26 +460,26 @@ async def checkout_book(isbn: str, request: CheckoutRequest) -> Dict[str, Any]:
         # Save the updated record
         storage.add_or_update_book(book_record)
         
-        return book_record.to_dict()
+        return _book_record_to_response(book_record)
     except Exception as e:
         logger.error(f"Error checking out book {isbn}: {e}")
         raise HTTPException(status_code=500, detail="Internal server error during checkout")
 
 
 @app.post("/api/books/{isbn}/checkin")
-async def checkin_book(isbn: str, request: Optional[CheckinRequest] = None) -> Dict[str, Any]:
+async def checkin_book(isbn: str, request: Optional[CheckinRequest] = None) -> BookRecordResponse:
     """
-    Check in a book, optionally relocating it to a new shelf position.
+    Check in a book, optionally relocating it to a different shelf.
     
     Args:
         isbn: The ISBN of the book to check in
-        request: Optional check-in request with new location details
+        request: Optional check-in request with new shelf location details
         
     Returns:
         Updated BookRecord as JSON dictionary
         
     Raises:
-        HTTPException: 404 if book not found, 400 if not checked out or invalid location
+        HTTPException: 404 if book not found, 400 if not checked out or invalid shelf coordinates
     """
     book_record = storage.get_book(isbn)
     if book_record is None:
@@ -425,7 +519,7 @@ async def checkin_book(isbn: str, request: Optional[CheckinRequest] = None) -> D
                     detail=f"Bookshelf '{bookshelf_name}' not found in location '{location}'"
                 )
             
-            # Validate position is within bookshelf bounds
+            # Validate shelf coordinates are within bookshelf bounds
             if not (0 <= column < bookshelf.columns):
                 raise HTTPException(
                     status_code=400,
@@ -449,7 +543,7 @@ async def checkin_book(isbn: str, request: Optional[CheckinRequest] = None) -> D
         # Save the updated record
         storage.add_or_update_book(book_record)
         
-        return book_record.to_dict()
+        return _book_record_to_response(book_record)
     except HTTPException:
         # Re-raise HTTP exceptions as-is
         raise
@@ -459,32 +553,41 @@ async def checkin_book(isbn: str, request: Optional[CheckinRequest] = None) -> D
 
 
 @app.get("/api/shelves", tags=["mcp"])
-async def get_all_shelves() -> List[Dict[str, Any]]:
+async def get_all_shelves() -> List[BookshelfResponse]:
     """
     Get all bookshelves in the library.
     
+    Each bookshelf is a physical multi-shelf grid structure with rows and columns.
+    For example, a bookshelf with rows=5 and columns=4 has 20 individual shelves
+    arranged in a 5x4 grid. Each shelf can hold multiple books side by side and is addressed
+    by (column, row) coordinates that are 0-indexed from the top-left corner.
+    
     Returns:
-        List of Bookshelf objects as JSON dictionaries
+        List of Bookshelf objects as JSON dictionaries, each showing the grid dimensions
+        of individual shelves within the bookshelf structure
     """
     try:
         bookshelves = storage.get_bookshelves()
-        return [bookshelf.to_dict() for bookshelf in bookshelves.values()]
+        return [_bookshelf_to_response(bookshelf) for bookshelf in bookshelves.values()]
     except Exception as e:
         logger.error(f"Error getting shelves: {e}")
         raise HTTPException(status_code=500, detail="Internal server error getting shelves")
 
 
 @app.get("/api/shelves/{location}/{name}")
-async def get_shelf_by_location_and_name(location: str, name: str) -> Dict[str, Any]:
+async def get_shelf_by_location_and_name(location: str, name: str) -> BookshelfResponse:
     """
     Get a specific bookshelf by location and name.
+    
+    Returns the bookshelf grid structure showing its dimensions (rows x columns).
+    Each position in the grid is an individual shelf that can hold multiple books at coordinates (column, row).
     
     Args:
         location: The location where the bookshelf is located (e.g., 'Library')
         name: The name of the bookshelf (e.g., 'Large bookshelf')
         
     Returns:
-        Bookshelf as JSON dictionary
+        Bookshelf as JSON dictionary showing the grid dimensions of individual shelves
         
     Raises:
         HTTPException: 404 if bookshelf not found
@@ -496,11 +599,11 @@ async def get_shelf_by_location_and_name(location: str, name: str) -> Dict[str, 
             detail=f"Bookshelf '{name}' not found in location '{location}'"
         )
     
-    return bookshelf.to_dict()
+    return _bookshelf_to_response(bookshelf)
 
 
 @app.post("/api/shelves")
-async def create_shelf(request: CreateBookshelfRequest) -> Dict[str, Any]:
+async def create_shelf(request: CreateBookshelfRequest) -> BookshelfResponse:
     """
     Create a new bookshelf.
     
@@ -526,7 +629,7 @@ async def create_shelf(request: CreateBookshelfRequest) -> Dict[str, Any]:
         # Add to storage
         storage.add_bookshelf(bookshelf)
         
-        return bookshelf.to_dict()
+        return _bookshelf_to_response(bookshelf)
     except ValueError as e:
         # Handle validation errors (e.g., dimensions, duplicate shelf)
         raise HTTPException(status_code=400, detail=str(e))
