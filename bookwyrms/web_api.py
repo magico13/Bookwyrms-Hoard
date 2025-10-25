@@ -8,6 +8,7 @@ from typing import Dict, List, Optional, Any
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi_mcp import FastApiMCP
 from pydantic import BaseModel
 import uvicorn
@@ -23,6 +24,15 @@ app = FastAPI(
     title="Bookwyrm's Hoard API",
     description="Personal library management API with barcode scanner support",
     version="1.0.0"
+)
+
+# Add CORS middleware to handle preflight OPTIONS requests
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allow all origins for MCP server usage
+    allow_credentials=True,
+    allow_methods=["*"],  # Allow all HTTP methods including OPTIONS
+    allow_headers=["*"],  # Allow all headers
 )
 
 # Initialize storage and lookup service - these will be shared across all requests
