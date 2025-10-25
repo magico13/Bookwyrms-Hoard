@@ -4,3 +4,4 @@ click>=8.3.0
 setuptools>=80.9.0
 fastapi>=0.115.0
 uvicorn>=0.31.0
+fastapi-mcp>=0.4.0

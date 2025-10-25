@@ -13,6 +13,8 @@ A CLI tool for managing book collections and tracking shelf locations.
 - **Book Location Tracking**: Track where each book is located on your shelves
 - **Check-out System**: Check books out to people and track due dates
 - **Web API**: Complete REST API for programmatic access
+- **MCP Server Support**: Model Context Protocol server for AI assistant integration
+- **CORS Support**: Cross-origin requests enabled for web integrations
 - **JSON Storage**: Portable data storage that works with version control
 
 ## Installation
@@ -123,8 +125,26 @@ python main.py web --reload
 - **Shelf management**: Create, list, and delete bookshelves
 - **ISBN lookup integration**: Automatic book metadata retrieval
 - **Interactive documentation**: Available at `http://localhost:8000/docs`
+- **CORS support**: Cross-origin requests enabled for web integrations
+- **MCP server integration**: Model Context Protocol endpoints for AI assistant integration
 
 See [WEB_API.md](WEB_API.md) for complete API documentation and examples.
+
+## MCP Server Support
+
+Bookwyrm's Hoard includes basic Model Context Protocol (MCP) server support for integration with AI assistants and LLMs:
+
+**MCP Endpoints:**
+
+- `/api/books` - Search and retrieve books
+- `/api/shelves` - List bookshelves
+
+**Features:**
+
+- **Smart Search**: AI assistants can search your library by title, author, or ISBN
+- **Shelf Discovery**: Browse your bookshelf organization and layout
+- **CORS Enabled**: Supports cross-origin requests from MCP clients
+- **Standardized API**: RESTful endpoints compatible with MCP specifications
 
 ## Docker Deployment
 
@@ -174,11 +194,6 @@ ports:
   - "3000:8000"  # Access on port 3000 instead of 8000
 ```
 
-## Future Features
-
-- [ ] Import/export collection data
-- [ ] Web interface frontend
-
 ## Development
 
 This project uses:
@@ -186,6 +201,8 @@ This project uses:
 - **isbnlib**: ISBN validation and metadata lookup
 - **requests**: HTTP API calls
 - **click**: Command-line interface framework
+- **FastAPI**: Web API framework with automatic OpenAPI documentation
+- **uvicorn**: ASGI web server for production deployment
 - **mypy**: Static type checking for Python
 
 ### Type Checking
