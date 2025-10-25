@@ -272,11 +272,15 @@ async def lookup_book_by_isbn(isbn: str) -> BookRecordResponse:
 
 @app.get("/api/books", tags=["mcp"])
 async def search_books(
-    q: Optional[str] = Query(None, description="search term - searches title, author, isbn")
+    q: Optional[str] = Query(None, description="search term for title, author, or ISBN - use plain string like 'Edward Ashton' not with extra quotes")
 ) -> List[BookRecordResponse]:
     """
     Search books by query term or get all books if no search criteria provided. Case insensitive.
     Fields are ANDed together if multiple terms provided, not ORed.
+    
+    For MCP clients: When calling this endpoint, pass the query parameter as a simple string value.
+    For author names with spaces like "Edward Ashton", use: {"q": "Edward Ashton"}
+    NOT: {"q": "\"Edward Ashton\""} or {\"q\":\"Edward Ashton\"}
     
     Args:
         q: Smart search term that searches title, author, and isbn
@@ -557,9 +561,10 @@ async def get_all_shelves() -> List[BookshelfResponse]:
     """
     Get all bookshelves in the library.
     
-    Each bookshelf is a physical multi-shelf grid structure with rows and columns.
+    Each bookshelf is a physical multi-shelf grid structure with rows and columns,
+    where each shelf holds any number of books. There is NOT one book per row/column position.
     For example, a bookshelf with rows=5 and columns=4 has 20 individual shelves
-    arranged in a 5x4 grid. Each shelf can hold multiple books side by side and is addressed
+    arranged in a 5x4 grid. Each shelf is addressed
     by (column, row) coordinates that are 0-indexed from the top-left corner.
     
     Returns:
