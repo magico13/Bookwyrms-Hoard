@@ -8,6 +8,7 @@ from typing import Dict, List, Optional, Any
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
+from fastapi_mcp import FastApiMCP
 from pydantic import BaseModel
 import uvicorn
 
@@ -31,6 +32,13 @@ lookup_service = BookLookupService()
 # Mount static files for the web interface
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
+# MCP server support
+mcp = FastApiMCP(
+    app,
+    include_tags=["mcp"],
+    name="Bookwyrm's Hoard MCP",)
+# Mount the MCP server directly to your FastAPI app
+mcp.mount()
 
 # Request/Response models
 class CheckoutRequest(BaseModel):
@@ -159,7 +167,7 @@ async def lookup_book_by_isbn(isbn: str) -> Dict[str, Any]:
         raise HTTPException(status_code=500, detail="Internal server error during lookup")
 
 
-@app.get("/api/books")
+@app.get("/api/books", tags=["mcp"])
 async def search_books(
     q: Optional[str] = Query(None, description="search term - searches title, author, isbn")
 ) -> List[Dict[str, Any]]:
@@ -440,7 +448,7 @@ async def checkin_book(isbn: str, request: Optional[CheckinRequest] = None) -> D
         raise HTTPException(status_code=500, detail="Internal server error during checkin")
 
 
-@app.get("/api/shelves")
+@app.get("/api/shelves", tags=["mcp"])
 async def get_all_shelves() -> List[Dict[str, Any]]:
     """
     Get all bookshelves in the library.
@@ -559,6 +567,7 @@ async def delete_shelf(location: str, name: str) -> Dict[str, str]:
         logger.error(f"Error deleting shelf {location}/{name}: {e}")
         raise HTTPException(status_code=500, detail="Internal server error deleting shelf")
 
+mcp.setup_server()
 
 def run_server(host: str = "0.0.0.0", port: int = 8000, reload: bool = False) -> None:
     """
