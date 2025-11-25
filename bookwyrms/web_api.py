@@ -203,7 +203,7 @@ async def api_info() -> Dict[str, str]:
 
 @app.get("/api/books/checked-out", tags=["mcp"], operation_id="list_checked_out_books")
 async def get_checked_out_books() -> List[BookRecordResponse]:
-    """Return all books currently checked out of the library."""
+    """Return all books currently checked out of the library. Dates are in UTC ISO-8601 format."""
     try:
         checked_out_books = storage.get_checked_out_books()
         return [_book_record_to_response(book_record) for book_record in checked_out_books]
