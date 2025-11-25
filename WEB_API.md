@@ -471,9 +471,9 @@ The test data includes:
 
 **Data Files:**
 
-- `data/books.json` / `data/bookshelves.json` - Active data (what API uses)
-- `data/books_production.json` / `data/bookshelves_production.json` - Production backup
-- `data/books_test.json` / `data/bookshelves_test.json` - Safe test dataset
+- `data/books.db` - Active SQLite database (used by the API/CLI)
+- `data/books_production.db` / `data/books_test.db` - Production/test snapshots (swap via `switch_data.sh`)
+- `data/books*.json` / `data/bookshelves*.json` - Legacy JSON fixtures retained so you can regenerate `.db` files with `scripts/migrate_json_to_sqlite.py`
 
 ### Running Tests
 
@@ -498,10 +498,10 @@ python test_api_comprehensive.py
 
 ### Data Safety
 
-- **Production data** is backed up to `data/books_production.json` and `data/bookshelves_production.json`
-- **Test data** is isolated in `data/books_test.json` and `data/bookshelves_test.json`
-- **Active data** files (`data/books.json`, `data/bookshelves.json`) are what the API uses
-- Use `./switch_data.sh` to safely switch between datasets
+- **Production data** lives in `data/books_production.db` (copy to `data/books.db` when activating)
+- **Test data** lives in `data/books_test.db`
+- **Active data** (`data/books.db`) is what the API uses
+- Use `./switch_data.sh` to safely switch between datasets and create timestamped backups
 
 ## Docker Support
 

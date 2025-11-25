@@ -7,7 +7,8 @@ This is a **type-safe Python CLI tool** for personal library management with bar
 - `bookwyrms/models.py` - Core book metadata (`BookInfo` dataclass)  
 - `bookwyrms/shelf_models.py` - Physical shelf management (`Bookshelf`, `ShelfLocation`, `BookRecord`)
 - `bookwyrms/lookup.py` - Multi-source ISBN lookup service (isbnlib → Google Books API fallback)
-- `bookwyrms/storage.py` - JSON file persistence in `data/` directory
+- `bookwyrms/storage.py` - SQLite + FTS persistence in `data/books.db`
+- `bookwyrms/storage_json.py` - Legacy JSON storage kept solely for migrations/tests
 - `bookwyrms/cli.py` - Click-based command interface with interactive modes
 
 ## Critical Patterns
@@ -24,7 +25,7 @@ Books use a **grid-based coordinate system** (0-indexed):
 - Lookup precedence: isbnlib services ('goob', 'openl') → Google Books API direct
 
 ### Data Serialization
-All domain objects are **dataclasses** with consistent `to_dict()`/`from_dict()` patterns for JSON persistence in `data/books.json` and `data/bookshelves.json`.
+All domain objects are **dataclasses** with consistent `to_dict()`/`from_dict()` helpers. Persistence now runs through SQLite tables, but JSON helpers remain for API payloads and migration utilities.
 
 ## Development Workflow
 
@@ -78,24 +79,24 @@ python test_api_comprehensive.py
 - `CHECKED456789` - Pre-checked out book (for error testing)
 
 **Data Files:**
-- `data/books.json` / `data/bookshelves.json` - Active data (what API uses)
-- `data/books_production.json` / `data/bookshelves_production.json` - Production backup
-- `data/books_test.json` / `data/bookshelves_test.json` - Safe test dataset
+- `data/books.db` - Active SQLite database (used by CLI/API)
+- `data/books_production.db` / `data/books_test.db` - Swappable databases via `switch_data.sh`
+- `data/books*.json` / `data/bookshelves*.json` - Legacy fixtures kept for migrations or reference
 
 ## Key Integration Points
 
 - **External APIs**: Google Books API, Open Library (via isbnlib)
-- **File System**: JSON files in `data/` directory (created automatically)
+- **File System**: SQLite databases in `data/` (created automatically, switch via `BOOKWYRMS_DB_PATH` or `switch_data.sh`)
 - **User Input**: Interactive barcode scanning via `shelf stock` command, manual book entry via `_collect_manual_book_info()`
 - **Web API**: FastAPI server for REST operations and web interface integration
 
 ## Common Operations
 
 ```python
-# Load/save data
+# Load data
 storage = BookshelfStorage()
-books = storage.get_all_books()
-storage.save_book_record(book_record)
+books = storage.get_books()
+storage.add_or_update_book(book_record)
 
 # ISBN lookup with fallback
 service = BookLookupService()

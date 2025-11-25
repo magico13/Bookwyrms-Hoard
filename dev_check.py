@@ -52,6 +52,20 @@ def run_test() -> bool:
         return False
 
 
+def run_storage_tests() -> bool:
+    """Execute the SQLite storage unit tests."""
+    print("📦 Running storage unit tests...")
+    result = subprocess.run(
+        [sys.executable, "-m", "unittest", "tests.test_storage"],
+        cwd=Path(__file__).parent,
+    )
+    if result.returncode == 0:
+        print("✅ Storage tests passed!")
+        return True
+    print("❌ Storage tests failed!")
+    return False
+
+
 def get_installed_packages() -> Dict[str, str]:
     """Get currently installed package versions."""
     import pkg_resources
@@ -141,7 +155,7 @@ def main() -> None:
     print("🚀 Running development checks for Bookwyrm's Hoard\n")
     
     checks_passed = 0
-    total_checks = 2
+    total_checks = 3
     
     if run_mypy():
         checks_passed += 1
@@ -149,6 +163,11 @@ def main() -> None:
     print()
     
     if run_test():
+        checks_passed += 1
+
+    print()
+
+    if run_storage_tests():
         checks_passed += 1
     
     if args.check_updates:

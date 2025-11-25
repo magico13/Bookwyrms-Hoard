@@ -15,7 +15,7 @@ A CLI tool for managing book collections and tracking shelf locations.
 - **Web API**: Complete REST API for programmatic access
 - **MCP Server Support**: Model Context Protocol server for AI assistant integration
 - **CORS Support**: Cross-origin requests enabled for web integrations
-- **JSON Storage**: Portable data storage that works with version control
+- **SQLite + FTS Search**: Fast, portable database storage with full-text search (legacy JSON support preserved for migration)
 
 ## Installation
 
@@ -102,10 +102,43 @@ python main.py status
 
 ## Data Storage
 
-Books and shelf information are stored in JSON files in the `data/` directory:
+Books and shelf information now live in a single SQLite database (`data/books.db`) that powers both the CLI and the FastAPI server. The database ships with SQLite's FTS5 extension enabled so searches like `"Edward Ashton 4th Consort"` can rank the most relevant matches even when the query mixes title/author fragments.
 
-- `data/books.json`: Book records with locations and checkout status
-- `data/bookshelves.json`: Bookshelf definitions and configurations
+### Migrating from JSON (one-time)
+
+If you're upgrading from an older release that used `books.json` / `bookshelves.json`, run the migration script once:
+
+```bash
+python scripts/migrate_json_to_sqlite.py --json-dir data --db-path data/books.db --force
+```
+
+The script automatically backs up existing `.db` files (or creates them if missing) and copies every shelf/book into SQLite. A legacy `JSONBookshelfStorage` lives in `bookwyrms/storage_json.py` purely for this migration path.
+
+### Switching between datasets
+
+Use `switch_data.sh` to swap between production/test databases or create backups:
+
+```bash
+# Switch to the curated test dataset
+./switch_data.sh test
+
+# Switch back to your production data
+./switch_data.sh production
+
+# See which DB is active and how many rows it has
+./switch_data.sh status
+```
+
+The script copies between `data/books.db`, `data/books_test.db`, and `data/books_production.db`. If the test/prod DBs don't exist yet, it will tell you how to generate them via the migration script using the JSON fixtures that remain in `data/` for reference.
+
+### Custom database locations
+
+Set the `BOOKWYRMS_DB_PATH` environment variable (or pass `db_path` into `BookshelfStorage`) to point the app at a different SQLite file. This is useful for Docker volumes, CI runs, or experimental datasets:
+
+```bash
+export BOOKWYRMS_DB_PATH=/tmp/bookwyrms-dev.db
+python main.py search dune
+```
 
 ## Web API
 
@@ -201,6 +234,7 @@ This project uses:
 - **isbnlib**: ISBN validation and metadata lookup
 - **requests**: HTTP API calls
 - **click**: Command-line interface framework
+- **SQLAlchemy**: SQLite schema management and query builder
 - **FastAPI**: Web API framework with automatic OpenAPI documentation
 - **uvicorn**: ASGI web server for production deployment
 - **mypy**: Static type checking for Python
