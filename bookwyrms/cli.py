@@ -6,11 +6,14 @@ import logging
 import uuid
 from datetime import datetime
 from typing import Optional
+
 import click
+
 from .lookup import BookLookupService
 from .models import BookInfo
 from .shelf_models import Bookshelf, BookRecord
 from .storage import BookshelfStorage
+from .time_utils import to_utc_iso
 
 
 def _display_book_info(book_info: BookInfo) -> None:
@@ -57,6 +60,25 @@ def _generate_fake_isbn() -> str:
     fake_id = str(uuid.uuid4()).replace('-', '')[:10]
     # Prefix with 'FAKE' to make it clear this isn't a real ISBN
     return f"FAKE{fake_id}"
+
+
+def _resolve_checkout_timestamp(date_input: Optional[str]) -> str:
+    """Convert user-provided checkout timestamps to UTC ISO strings."""
+    if date_input:
+        cleaned = date_input.strip()
+        if cleaned.endswith("Z"):
+            cleaned = f"{cleaned[:-1]}+00:00"
+        try:
+            dt_value = datetime.fromisoformat(cleaned)
+        except ValueError as exc:  # pragma: no cover - user input validation
+            raise click.BadParameter(
+                "Date must be ISO-8601 (e.g., 2025-01-05 or 2025-01-05T12:30:00-05:00)",
+                param_hint="--date",
+            ) from exc
+    else:
+        dt_value = datetime.now().astimezone()
+
+    return to_utc_iso(dt_value)
 
 
 def _collect_manual_book_info() -> Optional[BookInfo]:
@@ -324,17 +346,17 @@ def checkout_book(isbn: str, person: str, date: str) -> None:
         return
     
     # Use provided date or default to today
-    checkout_date = date if date else datetime.now().strftime('%Y-%m-%d')
+    checkout_timestamp = _resolve_checkout_timestamp(date)
     
     # Update book record
     book_record.checked_out_to = person
-    book_record.checked_out_date = checkout_date
+    book_record.checked_out_date = checkout_timestamp
     
     storage.add_or_update_book(book_record)
     
     click.echo(f"✅ Checked out: {book_record.book_info.title}")
     click.echo(f"👤 To: {person}")
-    click.echo(f"📅 Date: {checkout_date}")
+    click.echo(f"📅 Date: {checkout_timestamp}")
 
 
 @cli.command('checkin')

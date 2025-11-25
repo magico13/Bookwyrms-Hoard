@@ -5,6 +5,7 @@ Models for bookshelf and location management.
 from dataclasses import dataclass
 from typing import Optional, Dict, Any
 from .models import BookInfo
+from .time_utils import normalize_datetime_string
 
 
 @dataclass
@@ -126,7 +127,7 @@ class BookRecord:
             "book_info": self.book_info.to_dict(),
             "home_location": self.home_location.to_dict() if self.home_location else None,
             "checked_out_to": self.checked_out_to,
-            "checked_out_date": self.checked_out_date,
+            "checked_out_date": normalize_datetime_string(self.checked_out_date),
             "notes": self.notes
         }
     
@@ -137,6 +138,6 @@ class BookRecord:
             book_info=BookInfo(**data["book_info"]),
             home_location=ShelfLocation.from_dict(data["home_location"]) if data.get("home_location") else None,
             checked_out_to=data.get("checked_out_to"),
-            checked_out_date=data.get("checked_out_date"),
+            checked_out_date=normalize_datetime_string(data.get("checked_out_date")),
             notes=data.get("notes")
         )

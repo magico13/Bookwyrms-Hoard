@@ -23,6 +23,7 @@ from .db import (
 )
 from .models import BookInfo
 from .shelf_models import BookRecord, Bookshelf, ShelfLocation
+from .time_utils import normalize_datetime_string
 
 logger = logging.getLogger(__name__)
 
@@ -366,7 +367,7 @@ class BookshelfStorage:
             book_info=book_info,
             home_location=home_location,
             checked_out_to=row["checked_out_to"],
-            checked_out_date=row["checked_out_date"],
+            checked_out_date=normalize_datetime_string(row["checked_out_date"]),
             notes=row["notes"],
         )
 
@@ -386,7 +387,7 @@ class BookshelfStorage:
             "cover_url": record.book_info.cover_url,
             "language": record.book_info.language,
             "checked_out_to": record.checked_out_to,
-            "checked_out_date": record.checked_out_date,
+            "checked_out_date": normalize_datetime_string(record.checked_out_date),
             "notes": record.notes,
         }
 

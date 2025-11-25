@@ -17,6 +17,7 @@ from .storage import BookshelfStorage
 from .shelf_models import ShelfLocation, Bookshelf, BookRecord
 from .lookup import BookLookupService
 from .models import BookInfo
+from .time_utils import to_utc_iso
 
 logger = logging.getLogger(__name__)
 
@@ -470,7 +471,7 @@ async def checkout_book(isbn: str, request: CheckoutRequest) -> BookRecordRespon
     try:
         # Update checkout information
         book_record.checked_out_to = request.checked_out_to
-        book_record.checked_out_date = datetime.now().isoformat()
+        book_record.checked_out_date = to_utc_iso(datetime.now())
         
         # Save the updated record
         storage.add_or_update_book(book_record)
