@@ -200,7 +200,7 @@ async def api_info() -> Dict[str, str]:
     }
 
 
-@app.get("/api/books/checked-out", tags=["mcp"])
+@app.get("/api/books/checked-out", tags=["mcp"], operation_id="list_checked_out_books")
 async def get_checked_out_books() -> List[BookRecordResponse]:
     """Return all books currently checked out of the library."""
     try:
@@ -281,7 +281,7 @@ async def lookup_book_by_isbn(isbn: str) -> BookRecordResponse:
         raise HTTPException(status_code=500, detail="Internal server error during lookup")
 
 
-@app.get("/api/books", tags=["mcp"])
+@app.get("/api/books", tags=["mcp"], operation_id="search_books")
 async def search_books(
     q: Optional[str] = Query(None, description="search term for title, author, or ISBN - use plain string like 'Edward Ashton' not with extra quotes")
 ) -> List[BookRecordResponse]:
@@ -567,7 +567,7 @@ async def checkin_book(isbn: str, request: Optional[CheckinRequest] = None) -> B
         raise HTTPException(status_code=500, detail="Internal server error during checkin")
 
 
-@app.get("/api/shelves", tags=["mcp"])
+@app.get("/api/shelves", tags=["mcp"], operation_id="list_shelves")
 async def get_all_shelves() -> List[BookshelfResponse]:
     """
     Get all bookshelves in the library.
