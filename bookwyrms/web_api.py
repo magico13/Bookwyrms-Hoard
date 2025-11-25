@@ -200,6 +200,17 @@ async def api_info() -> Dict[str, str]:
     }
 
 
+@app.get("/api/books/checked-out", tags=["mcp"])
+async def get_checked_out_books() -> List[BookRecordResponse]:
+    """Return all books currently checked out of the library."""
+    try:
+        checked_out_books = storage.get_checked_out_books()
+        return [_book_record_to_response(book_record) for book_record in checked_out_books]
+    except Exception as e:
+        logger.error(f"Error retrieving checked out books: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error getting checked out books")
+
+
 @app.get("/api/books/{isbn}")
 async def get_book_by_isbn(isbn: str) -> BookRecordResponse:
     """

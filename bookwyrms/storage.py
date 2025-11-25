@@ -178,6 +178,18 @@ class BookshelfStorage:
 
         return {row["isbn"]: self._row_to_book_record(row) for row in rows}
 
+    def get_checked_out_books(self) -> List[BookRecord]:
+        """Return all books that are currently checked out."""
+        stmt = (
+            self._book_select()
+            .where(books_table.c.checked_out_to.is_not(None))
+            .order_by(books_table.c.title)
+        )
+        with self.engine.connect() as conn:
+            rows = conn.execute(stmt).mappings().all()
+
+        return [self._row_to_book_record(row) for row in rows]
+
     def get_book(self, isbn: str) -> Optional[BookRecord]:
         stmt = self._book_select().where(books_table.c.isbn == isbn)
         with self.engine.connect() as conn:
