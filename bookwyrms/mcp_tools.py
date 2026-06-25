@@ -1,0 +1,212 @@
+"""
+MCP tool definitions for Bookwyrm's Hoard library management.
+
+Thin controller layer — all business logic lives in library_service.
+"""
+
+import logging
+from typing import List, Optional
+
+from fastapi import HTTPException
+
+from .library_service import (
+    LibraryError,
+    mcp,
+    storage,
+    BookRecordResponse,
+    BookshelfResponse,
+    book_record_to_response,
+    bookshelf_to_response,
+    do_checkout_book,
+    do_checkin_book,
+    do_add_book,
+    do_lookup_book,
+)
+
+logger = logging.getLogger(__name__)
+
+# ------------------------------------------------------------------
+# MCP tool definitions — thin wrappers around library_service
+# ------------------------------------------------------------------
+@mcp.tool
+def list_checked_out_books() -> List[BookRecordResponse]:
+    """Return all books currently checked out of the library. Dates are in UTC ISO-8601 format."""
+    checked_out_books = storage.get_checked_out_books()
+    return [book_record_to_response(r) for r in checked_out_books]
+
+
+@mcp.tool
+def search_books(q: Optional[str] = None) -> List[BookRecordResponse]:
+    """Search books by query term or get all books if no search criteria provided. Case insensitive. Fields are ANDed together if multiple terms provided, not ORed.
+
+    Args:
+        q: Search term that searches title, author, and isbn. If None or empty, returns all books.
+    """
+    if q:
+        book_records = storage.search_books(q)
+        return [book_record_to_response(r) for r in book_records]
+    else:
+        books = storage.get_books()
+        return [book_record_to_response(r) for r in books.values()]
+
+
+@mcp.tool
+def list_shelves() -> List[BookshelfResponse]:
+    """Get all bookshelves in the library.
+
+    Each bookshelf is a physical multi-shelf grid structure with rows and columns,
+    where each shelf holds any number of books. There is NOT one book per row/column position.
+    For example, a bookshelf with rows=5 and columns=4 has 20 individual shelves
+    arranged in a 5x4 grid. Each shelf is addressed by (column, row) coordinates
+    that are 0-indexed from the top-left corner.
+    """
+    bookshelves = storage.get_bookshelves()
+    return [bookshelf_to_response(s) for s in bookshelves.values()]
+
+
+@mcp.tool
+def checkout_book(isbn: str, checked_out_to: str, notes: Optional[str] = None) -> BookRecordResponse:
+    """Check out a book to a person.
+
+    Args:
+        isbn: The ISBN of the book to check out.
+        checked_out_to: Name of the person checking out the book.
+        notes: Optional notes about the checkout.
+
+    Returns:
+        Updated BookRecord with checkout information.
+
+    Raises:
+        HTTPException: 404 if book not found, 400 if already checked out.
+    """
+    try:
+        record = do_checkout_book(isbn, checked_out_to, notes)
+        return book_record_to_response(record)
+    except LibraryError as e:
+        raise HTTPException(status_code=e.status_code, detail=e.message)
+    except Exception as e:
+        logger.error(f"Error checking out book {isbn}: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error during checkout")
+
+
+@mcp.tool
+def checkin_book(
+    isbn: str,
+    location: Optional[str] = None,
+    bookshelf_name: Optional[str] = None,
+    column: Optional[int] = None,
+    row: Optional[int] = None,
+) -> BookRecordResponse:
+    """Check in a book, optionally placing it on a specific shelf.
+
+    Args:
+        isbn: The ISBN of the book to check in.
+        location: Physical location like 'Library' or 'Office'. Required if relocating.
+        bookshelf_name: Name of the bookshelf structure. Required if relocating.
+        column: Column coordinate (0-indexed). Required if relocating.
+        row: Row coordinate (0-indexed). Required if relocating.
+
+    Returns:
+        Updated BookRecord with check-in information.
+
+    Raises:
+        HTTPException: 404 if book not found, 400 if not checked out or invalid shelf coordinates.
+    """
+    try:
+        record = do_checkin_book(isbn, location, bookshelf_name, column, row)
+        return book_record_to_response(record)
+    except LibraryError as e:
+        raise HTTPException(status_code=e.status_code, detail=e.message)
+    except Exception as e:
+        logger.error(f"Error checking in book {isbn}: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error during check-in")
+
+
+@mcp.tool
+def add_book(
+    isbn: Optional[str] = None,
+    title: Optional[str] = None,
+    authors: Optional[List[str]] = None,
+    publisher: Optional[str] = None,
+    published_date: Optional[str] = None,
+    description: Optional[str] = None,
+    location: Optional[str] = None,
+    bookshelf_name: Optional[str] = None,
+    column: Optional[int] = None,
+    row: Optional[int] = None,
+    notes: Optional[str] = None,
+) -> BookRecordResponse:
+    """Add a new book to the library, optionally placing it on a specific shelf.
+
+    Supports two modes:
+    1. ISBN lookup: Provide an ISBN and the system will look up book details automatically.
+    2. Manual entry: Provide a title (and optionally authors, publisher, etc.) to add a book manually.
+
+    Args:
+        isbn: ISBN for automatic lookup. If lookup fails, falls back to manual entry.
+        title: Book title (required for manual entry).
+        authors: List of author names.
+        publisher: Publisher name.
+        published_date: Publication date.
+        description: Book description.
+        location: Physical location like 'Library' or 'Office'. Required if placing on a shelf.
+        bookshelf_name: Name of the bookshelf structure. Required if placing on a shelf.
+        column: Column coordinate (0-indexed). Required if placing on a shelf.
+        row: Row coordinate (0-indexed). Required if placing on a shelf.
+        notes: Optional notes about the book.
+
+    Returns:
+        Created BookRecord.
+
+    Raises:
+        HTTPException: 400 if invalid parameters or book already exists.
+    """
+    try:
+        record = do_add_book(
+            isbn=isbn,
+            title=title,
+            authors=authors,
+            publisher=publisher,
+            published_date=published_date,
+            description=description,
+            location=location,
+            bookshelf_name=bookshelf_name,
+            column=column,
+            row=row,
+            notes=notes,
+        )
+        return book_record_to_response(record)
+    except LibraryError as e:
+        raise HTTPException(status_code=e.status_code, detail=e.message)
+    except Exception as e:
+        logger.error(f"Error adding book: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error adding book")
+
+
+@mcp.tool
+def lookup_book(isbn: str) -> BookRecordResponse:
+    """Look up a book by ISBN from the library or external sources.
+
+    If the book exists in the library, returns the complete record with location
+    and checkout status. If not in the library, performs an external lookup
+    (via isbnlib/Google Books) and returns basic book information with
+    home_location=None.
+
+    Args:
+        isbn: The ISBN of the book to look up.
+
+    Returns:
+        BookRecord with book details. home_location will be None if the book
+        is not in the library.
+
+    Raises:
+        HTTPException: 404 if book not found anywhere.
+    """
+    try:
+        record = do_lookup_book(isbn)
+        return book_record_to_response(record)
+    except LibraryError as e:
+        raise HTTPException(status_code=e.status_code, detail=e.message)
+    except Exception as e:
+        logger.error(f"Error looking up book {isbn}: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error during lookup")
