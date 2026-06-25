@@ -3,13 +3,15 @@ FastAPI web API for Bookwyrm's Hoard library management.
 """
 
 import logging
+from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Dict, List, Optional
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi_mcp import FastApiMCP
+from fastmcp import FastMCP
+from fastmcp.utilities.lifespan import combine_lifespans
 from pydantic import BaseModel
 import uvicorn
 
@@ -21,11 +23,28 @@ from .time_utils import to_utc_iso
 
 logger = logging.getLogger(__name__)
 
+
+@asynccontextmanager
+async def app_lifespan(app: FastAPI):
+    """Lifespan context for FastAPI app."""
+    yield
+
+
+# MCP server support (modern fastmcp pattern)
+mcp = FastMCP("Bookwyrm's Hoard MCP")
+
+# Create MCP ASGI app (path="/" since we mount at /mcp)
+mcp_app = mcp.http_app(path="/")
+
 app = FastAPI(
     title="Bookwyrm's Hoard API",
     description="Personal library management API with barcode scanner support",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=combine_lifespans(app_lifespan, mcp_app.lifespan),
 )
+
+# Mount MCP at /mcp
+app.mount("/mcp", mcp_app)
 
 # Add CORS middleware to handle preflight OPTIONS requests
 app.add_middleware(
@@ -43,16 +62,7 @@ lookup_service = BookLookupService()
 # Mount static files for the web interface
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# MCP server support
-mcp = FastApiMCP(
-    app,
-    include_tags=["mcp"],
-    name="Bookwyrm's Hoard MCP",
-    description="MCP server for Bookwyrm's Hoard library management. Each bookshelf is a multi-shelf grid structure with rows and columns (e.g., a 5x4 bookshelf has 20 individual shelves arranged in a grid). Each shelf in the grid can hold multiple books and is identified by (column, row) coordinates that are 0-indexed from top-left.",
-    describe_full_response_schema=True
-)
-# Mount the MCP server directly to your FastAPI app
-mcp.mount()
+
 
 # Request/Response models
 class CheckoutRequest(BaseModel):
@@ -201,7 +211,7 @@ async def api_info() -> Dict[str, str]:
     }
 
 
-@app.get("/api/books/checked-out", tags=["mcp"], operation_id="list_checked_out_books")
+@app.get("/api/books/checked-out")
 async def get_checked_out_books() -> List[BookRecordResponse]:
     """Return all books currently checked out of the library. Dates are in UTC ISO-8601 format."""
     try:
@@ -282,7 +292,7 @@ async def lookup_book_by_isbn(isbn: str) -> BookRecordResponse:
         raise HTTPException(status_code=500, detail="Internal server error during lookup")
 
 
-@app.get("/api/books", tags=["mcp"], operation_id="search_books")
+@app.get("/api/books")
 async def search_books(
     q: Optional[str] = Query(None, description="search term for title, author, or ISBN - use plain string like 'Edward Ashton' not with extra quotes")
 ) -> List[BookRecordResponse]:
@@ -568,7 +578,7 @@ async def checkin_book(isbn: str, request: Optional[CheckinRequest] = None) -> B
         raise HTTPException(status_code=500, detail="Internal server error during checkin")
 
 
-@app.get("/api/shelves", tags=["mcp"], operation_id="list_shelves")
+@app.get("/api/shelves")
 async def get_all_shelves() -> List[BookshelfResponse]:
     """
     Get all bookshelves in the library.
@@ -697,7 +707,43 @@ async def delete_shelf(location: str, name: str) -> Dict[str, str]:
         logger.error(f"Error deleting shelf {location}/{name}: {e}")
         raise HTTPException(status_code=500, detail="Internal server error deleting shelf")
 
-mcp.setup_server()
+
+# MCP tool definitions (modern fastmcp pattern)
+@mcp.tool
+def list_checked_out_books() -> List[BookRecordResponse]:
+    """Return all books currently checked out of the library. Dates are in UTC ISO-8601 format."""
+    checked_out_books = storage.get_checked_out_books()
+    return [_book_record_to_response(book_record) for book_record in checked_out_books]
+
+
+@mcp.tool
+def search_books(q: Optional[str] = None) -> List[BookRecordResponse]:
+    """Search books by query term or get all books if no search criteria provided. Case insensitive. Fields are ANDed together if multiple terms provided, not ORed.
+    
+    Args:
+        q: Search term that searches title, author, and isbn. If None or empty, returns all books.
+    """
+    if q:
+        book_records = storage.search_books(q)
+        return [_book_record_to_response(book_record) for book_record in book_records]
+    else:
+        books = storage.get_books()
+        return [_book_record_to_response(book_record) for book_record in books.values()]
+
+
+@mcp.tool
+def list_shelves() -> List[BookshelfResponse]:
+    """Get all bookshelves in the library.
+    
+    Each bookshelf is a physical multi-shelf grid structure with rows and columns,
+    where each shelf holds any number of books. There is NOT one book per row/column position.
+    For example, a bookshelf with rows=5 and columns=4 has 20 individual shelves
+    arranged in a 5x4 grid. Each shelf is addressed by (column, row) coordinates
+    that are 0-indexed from the top-left corner.
+    """
+    bookshelves = storage.get_bookshelves()
+    return [_bookshelf_to_response(bookshelf) for bookshelf in bookshelves.values()]
+
 
 def run_server(host: str = "0.0.0.0", port: int = 8000, reload: bool = False) -> None:
     """

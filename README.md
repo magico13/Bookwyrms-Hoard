@@ -165,19 +165,32 @@ See [WEB_API.md](WEB_API.md) for complete API documentation and examples.
 
 ## MCP Server Support
 
-Bookwyrm's Hoard includes basic Model Context Protocol (MCP) server support for integration with AI assistants and LLMs:
+Bookwyrm's Hoard includes Model Context Protocol (MCP) server support for integration with AI assistants and LLMs, built with the modern `fastmcp` library.
 
-**MCP Endpoints:**
+**MCP Tools:**
 
-- `/api/books` - Search and retrieve books
-- `/api/shelves` - List bookshelves
+- `list_checked_out_books` - Return all books currently checked out of the library
+- `search_books` - Search books by title, author, or ISBN (or get all books if no query)
+- `list_shelves` - List all bookshelves in the library with grid dimensions
 
 **Features:**
 
 - **Smart Search**: AI assistants can search your library by title, author, or ISBN
 - **Shelf Discovery**: Browse your bookshelf organization and layout
-- **CORS Enabled**: Supports cross-origin requests from MCP clients
-- **Standardized API**: RESTful endpoints compatible with MCP specifications
+- **Checkout Tracking**: See which books are checked out and to whom
+- **Standardized Protocol**: Streamable-HTTP transport compatible with MCP clients
+
+**Connect via MCP client:**
+
+```json
+{
+  "mcpServers": {
+    "book-library": {
+      "url": "http://localhost:8000/mcp/"
+    }
+  }
+}
+```
 
 ## Docker Deployment
 
