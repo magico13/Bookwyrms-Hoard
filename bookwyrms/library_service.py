@@ -318,3 +318,14 @@ def do_lookup_book(isbn: str) -> BookRecord:
         checked_out_date=None,
         notes=None,
     )
+
+def do_remove_book(isbn: str) -> bool:
+    """Permanently remove a book from the library by ISBN. This is a destructive operation and should be used with caution.
+
+    Returns True if the book was successfully removed, False otherwise.
+    """
+    book_record = storage.get_book(isbn)
+    if book_record is None:
+        raise LibraryError(f"Book with ISBN {isbn} not found", status_code=404)
+
+    return storage.remove_book(isbn)

@@ -298,6 +298,29 @@ async def delete_shelf(location: str, name: str) -> Dict[str, str]:
         logger.error(f"Error deleting shelf {location}/{name}: {e}")
         raise HTTPException(status_code=500, detail="Internal server error deleting shelf")
 
+@app.delete("/api/books/{isbn}")
+async def delete_book(isbn: str) -> Dict[str, str]:
+    """Delete a book from the library."""
+    try:
+        if not storage.get_book(isbn):
+            raise HTTPException(
+                status_code=404,
+                detail=f"Book with ISBN '{isbn}' not found",
+            )
+        success = storage.remove_book(isbn)
+        if not success:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Book with ISBN '{isbn}' not found",
+            )
+        return {"message": f"Successfully deleted book with ISBN '{isbn}'"}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting book {isbn}: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error deleting book")
 
 def run_server(host: str = "0.0.0.0", port: int = 8000, reload: bool = False) -> None:
     """Run the FastAPI server."""

@@ -21,6 +21,7 @@ from .library_service import (
     do_checkin_book,
     do_add_book,
     do_lookup_book,
+    do_remove_book,
 )
 
 logger = logging.getLogger(__name__)
@@ -210,3 +211,31 @@ def lookup_book(isbn: str) -> BookRecordResponse:
     except Exception as e:
         logger.error(f"Error looking up book {isbn}: {e}")
         raise HTTPException(status_code=500, detail="Internal server error during lookup")
+
+@mcp.tool
+def remove_book(isbn: str) -> BookRecordResponse:
+    """Permanently remove a book from the library by ISBN. This is a destructive operation and should be used with caution.
+
+    Args:
+        isbn: The ISBN of the book to remove.
+
+    Returns:
+        BookRecordResponse of the removed book.
+
+    Raises:
+        HTTPException: 404 if the book is not found.
+    """
+    try:
+        # get the book record to check if it exists before attempting removal
+        record = storage.get_book(isbn)
+        if record is None:
+            raise HTTPException(status_code=404, detail=f"Book with ISBN '{isbn}' not found")
+        success = do_remove_book(isbn)
+        if not success:
+            raise HTTPException(status_code=404, detail=f"Book with ISBN '{isbn}' not found")
+        return book_record_to_response(record)
+    except LibraryError as e:
+        raise HTTPException(status_code=e.status_code, detail=e.message)
+    except Exception as e:
+        logger.error(f"Error removing book {isbn}: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error removing book")
