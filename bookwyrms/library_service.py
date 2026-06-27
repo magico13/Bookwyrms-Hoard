@@ -21,7 +21,22 @@ from .lookup import BookLookupService
 from .models import BookInfo
 from .time_utils import to_utc_iso
 
+import isbnlib
+
 logger = logging.getLogger(__name__)
+
+
+def _normalize_isbn(isbn: str) -> str:
+    """Normalize an ISBN for consistent storage and lookups.
+
+    * Real ISBNs are canonicalized (digits + X only, e.g. ``9780321534965``).
+    * Fake ISBNs (prefixed with ``FAKE``) pass through unchanged so they aren't mangled.
+    """
+    if not isbn or isbn.startswith("FAKE"):
+        return isbn
+    clean = isbnlib.canonical(isbn)
+    return clean or isbn  # fallback to original if canonical fails
+
 
 # ------------------------------------------------------------------
 # Infrastructure
@@ -181,6 +196,7 @@ def do_checkout_book(
     isbn: str, checked_out_to: str, notes: Optional[str] = None
 ) -> BookRecord:
     """Check out a book to a person. Returns the updated BookRecord."""
+    isbn = _normalize_isbn(isbn)
     book_record = storage.get_book(isbn)
     if book_record is None:
         raise LibraryError(f"Book with ISBN {isbn} not found", status_code=404)
@@ -208,6 +224,7 @@ def do_checkin_book(
     row: Optional[int] = None,
 ) -> BookRecord:
     """Check in a book, optionally placing it on a specific shelf."""
+    isbn = _normalize_isbn(isbn)
     book_record = storage.get_book(isbn)
     if book_record is None:
         raise LibraryError(f"Book with ISBN {isbn} not found", status_code=404)
@@ -246,6 +263,9 @@ def do_add_book(
     notes: Optional[str] = None,
 ) -> BookRecord:
     """Add a new book to the library, optionally placing it on a shelf."""
+    if isbn:
+        isbn = _normalize_isbn(isbn)
+
     book_info: Optional[BookInfo] = None
 
     # Try ISBN lookup first
@@ -303,6 +323,7 @@ def do_lookup_book(isbn: str) -> BookRecord:
     and checkout status. If not in the library, performs external lookup and
     returns a BookRecord with home_location=None.
     """
+    isbn = _normalize_isbn(isbn)
     book_record = storage.get_book(isbn)
     if book_record is not None:
         return book_record
@@ -324,6 +345,7 @@ def do_remove_book(isbn: str) -> bool:
 
     Returns True if the book was successfully removed, False otherwise.
     """
+    isbn = _normalize_isbn(isbn)
     book_record = storage.get_book(isbn)
     if book_record is None:
         raise LibraryError(f"Book with ISBN {isbn} not found", status_code=404)

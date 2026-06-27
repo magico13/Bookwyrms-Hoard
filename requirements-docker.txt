@@ -1,7 +1,6 @@
-isbnlib>=3.10.14
+isbnlib2>=3.11.19  # maintained fork of isbnlib, no pkg_resources dependency
 requests>=2.32.5
 click>=8.3.0
-setuptools>=80.9.0
 fastapi>=0.115.0
 uvicorn>=0.31.0
 fastmcp>=2.0.0
